@@ -34,6 +34,57 @@
 
 <script>
   /* =====================================================================
+     PAINEL DE DIAGNÓSTICO
+     ---------------------------------------------------------------------
+     Se algo falhar (CDN bloqueado, config errada, etc.), isso evita uma
+     tela em branco silenciosa e mostra o motivo na própria página.
+     ===================================================================== */
+  function showFatalError(title, detail) {
+    var root = document.getElementById("root");
+    if (!root || root.dataset.appMounted === "1") return;
+    root.innerHTML =
+      '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;' +
+      'background:#101820;color:#EDE8DD;font-family:IBM Plex Sans, sans-serif;padding:20px;">' +
+      '<div style="max-width:640px;background:#17222C;border:1px solid #2B3A47;border-radius:14px;padding:26px;">' +
+      '<div style="font-family:Fraunces, serif;font-style:italic;font-size:20px;color:#D6A94A;margin-bottom:10px;">' + title + '</div>' +
+      '<div style="font-family:IBM Plex Mono, monospace;font-size:12.5px;color:#8FA0AC;white-space:pre-wrap;line-height:1.6;">' +
+      (detail || "").replace(/</g, "&lt;") + '</div></div></div>';
+  }
+
+  window.addEventListener("error", function (e) {
+    console.error("Erro capturado:", e.error || e.message);
+    showFatalError("Ocorreu um erro ao carregar o app", (e.message || "") + (e.filename ? ("\n" + e.filename + ":" + e.lineno) : ""));
+  });
+  window.addEventListener("unhandledrejection", function (e) {
+    console.error("Promise rejeitada:", e.reason);
+    showFatalError("Ocorreu um erro ao carregar o app", String(e.reason && e.reason.message || e.reason));
+  });
+
+  // Se depois de alguns segundos nada foi renderizado, diagnostica quais
+  // bibliotecas externas (CDN) não carregaram.
+  window.addEventListener("load", function () {
+    setTimeout(function () {
+      var root = document.getElementById("root");
+      if (root && root.innerHTML.trim() === "") {
+        var missing = [];
+        if (typeof React === "undefined") missing.push("React (unpkg.com/react)");
+        if (typeof ReactDOM === "undefined") missing.push("ReactDOM (unpkg.com/react-dom)");
+        if (typeof Babel === "undefined") missing.push("Babel (unpkg.com/@babel/standalone)");
+        if (typeof firebase === "undefined") missing.push("Firebase (gstatic.com/firebasejs)");
+        showFatalError(
+          "A página ficou em branco",
+          missing.length
+            ? "Estas bibliotecas externas não carregaram (provável bloqueio de rede/adblock/firewall):\n- " + missing.join("\n- ") +
+              "\n\nAbra o Console do navegador (F12) para mais detalhes."
+            : "Todas as bibliotecas externas carregaram, mas o app não renderizou. Abra o Console do navegador (F12) e veja a mensagem de erro em vermelho."
+        );
+      }
+    }, 3500);
+  });
+</script>
+
+<script>
+  /* =====================================================================
      CONFIGURAÇÃO DO FIREBASE
      ---------------------------------------------------------------------
      1. Crie um projeto gratuito em https://console.firebase.google.com
@@ -43,6 +94,9 @@
         (veja o texto que acompanha este arquivo).
      4. Em "Configurações do projeto" > "Seus apps" > "Web", copie o
         objeto de configuração e cole abaixo, substituindo os valores.
+     5. Em Authentication > Settings > Authorized domains, adicione o
+        domínio do GitHub Pages (ex: seuusuario.github.io) — sem isso o
+        login anônimo falha.
      ===================================================================== */
   window.__FIREBASE_CONFIG__ = {
     apiKey: "YOUR_API_KEY",
@@ -55,12 +109,15 @@
 
   window.__FIREBASE_CONFIGURED__ = window.__FIREBASE_CONFIG__.apiKey !== "YOUR_API_KEY";
 
-  if (window.__FIREBASE_CONFIGURED__) {
+  if (window.__FIREBASE_CONFIGURED__ && typeof firebase !== "undefined") {
     try {
       firebase.initializeApp(window.__FIREBASE_CONFIG__);
     } catch (e) {
       console.error("Erro ao iniciar Firebase:", e);
+      showFatalError("Erro ao iniciar o Firebase", String(e && e.message || e));
     }
+  } else if (window.__FIREBASE_CONFIGURED__) {
+    console.error("SDK do Firebase não carregou (firebase é undefined).");
   }
 </script>
 
@@ -1265,17 +1322,27 @@ function App() {
 
   useEffect(() => {
     if (!window.__FIREBASE_CONFIGURED__) return;
-    const auth = firebase.auth();
-    const unsub = auth.onAuthStateChanged(user => {
-      if (user) {
-        setUid(user.uid);
-      } else {
-        auth.signInAnonymously().catch(err => {
-          console.error(err);
-          setAuthError(err.message);
-        });
-      }
-    });
+    if (typeof firebase === "undefined" || !firebase.auth) {
+      setAuthError("O SDK do Firebase não carregou (verifique bloqueadores de anúncio/firewall e recarregue a página).");
+      return;
+    }
+    let unsub = () => {};
+    try {
+      const auth = firebase.auth();
+      unsub = auth.onAuthStateChanged(user => {
+        if (user) {
+          setUid(user.uid);
+        } else {
+          auth.signInAnonymously().catch(err => {
+            console.error(err);
+            setAuthError(err.code ? `${err.code}: ${err.message}` : err.message);
+          });
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      setAuthError(String(err && err.message || err));
+    }
     return () => unsub();
   }, []);
 
@@ -1414,8 +1481,29 @@ function App() {
   );
 }
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App />);
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { console.error("Erro no app:", error, info); }
+  render() {
+    if (this.state.error) {
+      return <LoadingScreen label={`Erro ao renderizar o app: ${this.state.error.message || this.state.error}`} />;
+    }
+    return this.props.children;
+  }
+}
+
+try {
+  const rootEl = document.getElementById("root");
+  const root = ReactDOM.createRoot(rootEl);
+  root.render(<ErrorBoundary><App /></ErrorBoundary>);
+  rootEl.dataset.appMounted = "1";
+} catch (e) {
+  console.error("Falha ao montar o app:", e);
+  if (typeof showFatalError === "function") {
+    showFatalError("Falha ao montar o app", String(e && e.message || e));
+  }
+}
 </script>
 </body>
 </html>

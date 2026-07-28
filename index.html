@@ -1,1509 +1,1077 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Fluxo&amp;Caixa · Gestão Financeira Pessoal</title>
-
-<!-- Fontes -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cofre — Controle Financeiro Pessoal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: #101820; }
-  ::selection { background: #C6A15B44; }
-  select { appearance: none; }
-  button { transition: opacity .15s, transform .1s; font-family: inherit; }
-  button:active { transform: scale(0.98); }
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-thumb { background: #2B3A47; border-radius: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
+  :root{
+    --bg-base:#10121b;
+    --bg-surface:#171a27;
+    --bg-elevated:#20243590;
+    --bg-elevated-solid:#20243a;
+    --bg-elevated-2:#2a2f47;
+    --border:#2d3148;
+    --border-soft:#262a3d;
+    --text-primary:#f1f2f9;
+    --text-secondary:#9ba0c2;
+    --text-muted:#666b8c;
+    --emerald:#2fe0a8;
+    --emerald-dim:#2fe0a822;
+    --rose:#ff6b81;
+    --rose-dim:#ff6b8122;
+    --amber:#ffc24b;
+    --amber-dim:#ffc24b22;
+    --blue:#5b9dff;
+    --blue-dim:#5b9dff22;
+    --violet:#b98cff;
+    --violet-dim:#b98cff22;
+    --radius:16px;
+    --radius-sm:10px;
+    --shadow:0 8px 30px rgba(0,0,0,.35);
+    font-family:'Inter',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #1c2440 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, #241a38 0%, transparent 55%),
+      var(--bg-base);
+    color:var(--text-primary);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background:var(--emerald); color:#0a0d14; }
+  a{color:inherit;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .container{ max-width:1080px; margin:0 auto; padding:28px 20px 100px; }
+
+  /* Header */
+  header.top{ display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:22px; flex-wrap:wrap;}
+  .brand{ display:flex; align-items:center; gap:12px;}
+  .brand-mark{ width:44px; height:44px; border-radius:50%; position:relative; background:conic-gradient(var(--emerald) 0deg 216deg, var(--rose) 216deg 360deg); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .brand-mark::after{ content:""; position:absolute; inset:5px; border-radius:50%; background:var(--bg-base);}
+  .brand-mark span{ position:relative; font-family:'Sora',sans-serif; font-weight:800; font-size:15px; z-index:1;}
+  .brand h1{ font-family:'Sora',sans-serif; font-size:22px; margin:0; font-weight:800; letter-spacing:-.02em;}
+  .brand p{ margin:0; color:var(--text-muted); font-size:12.5px;}
+
+  .balance-pill{
+    background:var(--bg-elevated-solid); border:1px solid var(--border-soft); border-radius:100px;
+    padding:10px 20px; display:flex; align-items:center; gap:10px;
+  }
+  .balance-pill .lbl{ font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em;}
+  .balance-pill .val{ font-family:'JetBrains Mono',monospace; font-weight:600; font-size:17px;}
+  .balance-pill .val.pos{ color:var(--emerald);}
+  .balance-pill .val.neg{ color:var(--rose);}
+
+  /* Tabs */
+  nav.tabs{ display:flex; gap:6px; background:var(--bg-surface); padding:6px; border-radius:100px; border:1px solid var(--border-soft); margin-bottom:24px; width:fit-content; }
+  nav.tabs button{
+    all:unset; cursor:pointer; padding:9px 18px; border-radius:100px; font-size:13.5px; font-weight:600;
+    color:var(--text-secondary); transition:.18s; display:flex; align-items:center; gap:7px;
+  }
+  nav.tabs button:hover{ color:var(--text-primary); }
+  nav.tabs button.active{ background:var(--bg-elevated-2); color:var(--text-primary); box-shadow:inset 0 0 0 1px var(--border);}
+
+  section.view{ display:none; }
+  section.view.active{ display:block; animation:fadein .25s ease; }
+  @keyframes fadein{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+
+  /* Cards */
+  .card{ background:var(--bg-surface); border:1px solid var(--border-soft); border-radius:var(--radius); padding:20px; margin-bottom:16px; }
+  .card-title{ font-family:'Sora',sans-serif; font-weight:700; font-size:15px; margin:0 0 14px; display:flex; align-items:center; gap:8px;}
+
+  .row-between{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+
+  button.btn{
+    all:unset; cursor:pointer; font-family:'Inter',sans-serif; font-weight:600; font-size:13px;
+    padding:9px 16px; border-radius:10px; display:inline-flex; align-items:center; gap:6px; transition:.15s;
+  }
+  .btn-primary{ background:var(--emerald); color:#08120e; }
+  .btn-primary:hover{ filter:brightness(1.08); }
+  .btn-ghost{ background:var(--bg-elevated-2); color:var(--text-primary); border:1px solid var(--border);}
+  .btn-ghost:hover{ background:#333955; }
+  .btn-danger-outline{ background:transparent; color:var(--rose); border:1px solid var(--rose-dim); }
+  .btn-danger-outline:hover{ background:var(--rose-dim); }
+  .btn-icon{ padding:7px; border-radius:8px; background:transparent; }
+  .btn-icon:hover{ background:var(--bg-elevated-2); }
+  .btn-sm{ padding:6px 12px; font-size:12px;}
+
+  svg.icon{ width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0;}
+
+  /* Month accordion */
+  .month-card{ background:var(--bg-surface); border:1px solid var(--border-soft); border-radius:var(--radius); margin-bottom:12px; overflow:hidden;}
+  .month-head{ display:flex; align-items:center; gap:16px; padding:16px 18px; cursor:pointer; user-select:none; }
+  .month-head:hover{ background:#1b1e2d; }
+  .ring-wrap{ position:relative; width:52px; height:52px; flex-shrink:0;}
+  .ring-wrap svg{ width:52px; height:52px; transform:rotate(-90deg);}
+  .ring-wrap .ring-bg{ stroke:var(--bg-elevated-2); }
+  .ring-wrap .ring-fg{ stroke:var(--emerald); stroke-linecap:round; transition:stroke-dashoffset .4s; }
+  .month-info{ flex:1; min-width:160px;}
+  .month-info .name{ font-family:'Sora',sans-serif; font-weight:700; font-size:15.5px; text-transform:capitalize;}
+  .month-info .sub{ font-size:12px; color:var(--text-muted); margin-top:2px;}
+  .month-stats{ display:flex; gap:22px; flex-wrap:wrap; }
+  .stat{ text-align:right; min-width:70px;}
+  .stat .k{ font-size:10.5px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em;}
+  .stat .v{ font-family:'JetBrains Mono',monospace; font-weight:600; font-size:14px; margin-top:1px;}
+  .stat .v.pago{ color:var(--emerald);}
+  .stat .v.pendente{ color:var(--amber);}
+  .chevron{ transition:transform .25s; color:var(--text-muted); }
+  .month-card.open .chevron{ transform:rotate(180deg); }
+  .month-body{ display:none; border-top:1px solid var(--border-soft); padding:14px 18px 18px;}
+  .month-card.open .month-body{ display:block;}
+  .empty-msg{ color:var(--text-muted); font-size:13px; padding:14px 0; text-align:center;}
+
+  .expense-row{ display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border-soft); }
+  .expense-row:last-child{ border-bottom:none;}
+  .icon-badge{ width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;}
+  .exp-main{ flex:1; min-width:0;}
+  .exp-main .desc{ font-weight:600; font-size:13.5px; }
+  .exp-tags{ display:flex; gap:6px; flex-wrap:wrap; margin-top:5px;}
+  .tag{ font-size:10.5px; padding:2px 8px; border-radius:100px; background:var(--bg-elevated-2); color:var(--text-secondary); }
+  .exp-val{ font-family:'JetBrains Mono',monospace; font-weight:600; font-size:14px; white-space:nowrap; text-align:right; min-width:90px;}
+  .exp-actions{ display:flex; gap:2px; align-items:center;}
+  .status-btn{ all:unset; cursor:pointer; font-size:10.5px; font-weight:700; padding:4px 10px; border-radius:100px; text-transform:uppercase; letter-spacing:.03em;}
+  .status-btn.pago{ background:var(--emerald-dim); color:var(--emerald);}
+  .status-btn.pendente{ background:var(--amber-dim); color:var(--amber);}
+
+  /* forms */
+  .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .form-grid .full{ grid-column:1/-1;}
+  label{ font-size:12px; color:var(--text-secondary); font-weight:600; display:block; margin-bottom:6px;}
+  input,select,textarea{
+    width:100%; background:var(--bg-base); border:1px solid var(--border); color:var(--text-primary);
+    padding:10px 12px; border-radius:10px; font-family:'Inter',sans-serif; font-size:13.5px; outline:none;
+  }
+  input:focus,select:focus,textarea:focus{ border-color:var(--emerald); box-shadow:0 0 0 3px var(--emerald-dim); }
+  input[type=color]{ padding:3px; height:38px; cursor:pointer;}
+  .field{ margin-bottom:2px;}
+  .check-row{ display:flex; align-items:center; gap:8px; }
+  .check-row input{ width:auto; }
+
+  /* modal */
+  .modal-overlay{ position:fixed; inset:0; background:rgba(6,7,12,.6); backdrop-filter:blur(3px); display:none; align-items:flex-start; justify-content:center; z-index:100; padding:40px 16px; overflow-y:auto;}
+  .modal-overlay.active{ display:flex; }
+  .modal{ background:var(--bg-elevated-solid); border:1px solid var(--border); border-radius:18px; padding:24px; width:100%; max-width:480px; box-shadow:var(--shadow); animation:pop .2s ease;}
+  @keyframes pop{ from{ transform:scale(.96); opacity:0;} to{transform:scale(1); opacity:1;} }
+  .modal-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;}
+  .modal-head h3{ font-family:'Sora',sans-serif; margin:0; font-size:17px;}
+  .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:18px;}
+
+  /* config lists */
+  .cfg-item{ background:var(--bg-elevated); border:1px solid var(--border-soft); border-radius:12px; padding:12px 14px; margin-bottom:8px;}
+  .cfg-item-head{ display:flex; align-items:center; gap:10px;}
+  .cfg-item-head .name{ font-weight:700; font-size:14px; flex:1;}
+  .chip-list{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;}
+  .chip{ background:var(--bg-elevated-2); border-radius:100px; padding:3px 10px 3px 10px; font-size:11.5px; color:var(--text-secondary); display:flex; align-items:center; gap:6px;}
+  .chip button{ all:unset; cursor:pointer; color:var(--text-muted); display:flex;}
+  .chip button:hover{ color:var(--rose);}
+  .add-inline{ display:flex; gap:8px; margin-top:10px;}
+  .add-inline input{ flex:1;}
+
+  .bar-row{ margin-bottom:14px;}
+  .bar-row .bl{ display:flex; justify-content:space-between; font-size:12px; color:var(--text-secondary); margin-bottom:6px;}
+  .bar-track{ position:relative; height:9px; background:var(--bg-elevated-2); border-radius:100px; overflow:visible;}
+  .bar-fill{ height:100%; border-radius:100px; transition:width .5s ease;}
+  .bar-target{ position:absolute; top:-3px; width:2px; height:15px; background:var(--text-primary); border-radius:2px;}
+
+  .accounts-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
+  .account-card{ background:var(--bg-surface); border:1px solid var(--border-soft); border-radius:var(--radius); padding:18px;}
+  .account-card .top{ display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .account-card .top .name{ font-weight:700; font-size:14px; flex:1;}
+  .account-card .saldo{ font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700;}
+  .account-card .foot{ display:flex; gap:6px; margin-top:14px;}
+
+  .tab-nav-sm{ display:flex; gap:6px; margin-bottom:18px; flex-wrap:wrap;}
+  .tab-nav-sm button{ all:unset; cursor:pointer; padding:7px 14px; font-size:12.5px; font-weight:600; border-radius:100px; background:var(--bg-elevated); color:var(--text-secondary); border:1px solid var(--border-soft);}
+  .tab-nav-sm button.active{ background:var(--emerald-dim); color:var(--emerald); border-color:transparent;}
+
+  .toast{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--bg-elevated-2); border:1px solid var(--border); padding:12px 20px; border-radius:12px; font-size:13px; z-index:200; opacity:0; pointer-events:none; transition:.25s; box-shadow:var(--shadow);}
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(-4px);}
+
+  @media(max-width:640px){
+    .form-grid{ grid-template-columns:1fr;}
+    .month-stats{ gap:12px;}
+    header.top{ flex-direction:column; align-items:flex-start;}
+    .exp-tags{ display:none;}
+  }
 </style>
-
-<!-- React + Babel (via CDN, sem etapa de build) -->
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-<!-- Firebase (plano gratuito "Spark") -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
-<div id="root"></div>
+<div class="container">
 
-<script>
-  /* =====================================================================
-     PAINEL DE DIAGNÓSTICO
-     ---------------------------------------------------------------------
-     Se algo falhar (CDN bloqueado, config errada, etc.), isso evita uma
-     tela em branco silenciosa e mostra o motivo na própria página.
-     ===================================================================== */
-  function showFatalError(title, detail) {
-    var root = document.getElementById("root");
-    if (!root || root.dataset.appMounted === "1") return;
-    root.innerHTML =
-      '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;' +
-      'background:#101820;color:#EDE8DD;font-family:IBM Plex Sans, sans-serif;padding:20px;">' +
-      '<div style="max-width:640px;background:#17222C;border:1px solid #2B3A47;border-radius:14px;padding:26px;">' +
-      '<div style="font-family:Fraunces, serif;font-style:italic;font-size:20px;color:#D6A94A;margin-bottom:10px;">' + title + '</div>' +
-      '<div style="font-family:IBM Plex Mono, monospace;font-size:12.5px;color:#8FA0AC;white-space:pre-wrap;line-height:1.6;">' +
-      (detail || "").replace(/</g, "&lt;") + '</div></div></div>';
-  }
+  <header class="top">
+    <div class="brand">
+      <div class="brand-mark"><span>C</span></div>
+      <div>
+        <h1>Cofre</h1>
+        <p>Controle financeiro pessoal</p>
+      </div>
+    </div>
+    <div class="balance-pill">
+      <span class="lbl">Saldo total</span>
+      <span class="val mono" id="saldoTotalDisplay">R$ 0,00</span>
+    </div>
+  </header>
 
-  window.addEventListener("error", function (e) {
-    console.error("Erro capturado:", e.error || e.message);
-    showFatalError("Ocorreu um erro ao carregar o app", (e.message || "") + (e.filename ? ("\n" + e.filename + ":" + e.lineno) : ""));
-  });
-  window.addEventListener("unhandledrejection", function (e) {
-    console.error("Promise rejeitada:", e.reason);
-    showFatalError("Ocorreu um erro ao carregar o app", String(e.reason && e.reason.message || e.reason));
-  });
+  <nav class="tabs">
+    <button data-tab="despesas" class="active">Despesas</button>
+    <button data-tab="receitas">Receitas</button>
+    <button data-tab="contas">Contas</button>
+    <button data-tab="config">Configurações</button>
+  </nav>
 
-  // Se depois de alguns segundos nada foi renderizado, diagnostica quais
-  // bibliotecas externas (CDN) não carregaram.
-  window.addEventListener("load", function () {
-    setTimeout(function () {
-      var root = document.getElementById("root");
-      if (root && root.innerHTML.trim() === "") {
-        var missing = [];
-        if (typeof React === "undefined") missing.push("React (unpkg.com/react)");
-        if (typeof ReactDOM === "undefined") missing.push("ReactDOM (unpkg.com/react-dom)");
-        if (typeof Babel === "undefined") missing.push("Babel (unpkg.com/@babel/standalone)");
-        if (typeof firebase === "undefined") missing.push("Firebase (gstatic.com/firebasejs)");
-        showFatalError(
-          "A página ficou em branco",
-          missing.length
-            ? "Estas bibliotecas externas não carregaram (provável bloqueio de rede/adblock/firewall):\n- " + missing.join("\n- ") +
-              "\n\nAbra o Console do navegador (F12) para mais detalhes."
-            : "Todas as bibliotecas externas carregaram, mas o app não renderizou. Abra o Console do navegador (F12) e veja a mensagem de erro em vermelho."
-        );
-      }
-    }, 3500);
-  });
-</script>
+  <!-- DESPESAS -->
+  <section class="view active" id="view-despesas">
+    <div class="card" id="classesResumoCard" style="display:none;">
+      <div class="card-title">🎯 Metas por classe — mês atual</div>
+      <div id="classesResumoBody"></div>
+    </div>
+    <div class="row-between" style="margin-bottom:14px;">
+      <div style="color:var(--text-muted); font-size:13px;">Próximos 12 meses + histórico retroativo</div>
+      <button class="btn btn-ghost btn-sm" id="btnAddMesRetro">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>
+        Adicionar mês retroativo
+      </button>
+    </div>
+    <div id="mesesContainer"></div>
+  </section>
 
-<script>
-  /* =====================================================================
-     CONFIGURAÇÃO DO FIREBASE
-     ---------------------------------------------------------------------
-     1. Crie um projeto gratuito em https://console.firebase.google.com
-        (plano "Spark", sem custo).
-     2. Ative "Authentication" > método "Anônimo".
-     3. Ative "Firestore Database" (modo produção) e configure as regras
-        (veja o texto que acompanha este arquivo).
-     4. Em "Configurações do projeto" > "Seus apps" > "Web", copie o
-        objeto de configuração e cole abaixo, substituindo os valores.
-     5. Em Authentication > Settings > Authorized domains, adicione o
-        domínio do GitHub Pages (ex: seuusuario.github.io) — sem isso o
-        login anônimo falha.
-     ===================================================================== */
-  window.__FIREBASE_CONFIG__ = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
+  <!-- RECEITAS -->
+  <section class="view" id="view-receitas">
+    <div class="row-between" style="margin-bottom:14px;">
+      <div style="color:var(--text-muted); font-size:13px;">Entradas de receita organizadas por mês</div>
+      <button class="btn btn-primary btn-sm" id="btnNovaReceita">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Nova receita
+      </button>
+    </div>
+    <div id="receitasContainer"></div>
+  </section>
 
-  window.__FIREBASE_CONFIGURED__ = window.__FIREBASE_CONFIG__.apiKey !== "YOUR_API_KEY";
+  <!-- CONTAS -->
+  <section class="view" id="view-contas">
+    <div class="row-between" style="margin-bottom:14px;">
+      <div style="color:var(--text-muted); font-size:13px;">De onde saem seus pagamentos</div>
+      <button class="btn btn-primary btn-sm" id="btnNovaConta">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Nova conta
+      </button>
+    </div>
+    <div class="accounts-grid" id="contasContainer"></div>
+  </section>
 
-  if (window.__FIREBASE_CONFIGURED__ && typeof firebase !== "undefined") {
-    try {
-      firebase.initializeApp(window.__FIREBASE_CONFIG__);
-    } catch (e) {
-      console.error("Erro ao iniciar Firebase:", e);
-      showFatalError("Erro ao iniciar o Firebase", String(e && e.message || e));
-    }
-  } else if (window.__FIREBASE_CONFIGURED__) {
-    console.error("SDK do Firebase não carregou (firebase é undefined).");
-  }
-</script>
+  <!-- CONFIG -->
+  <section class="view" id="view-config">
+    <div class="tab-nav-sm">
+      <button data-cfg="categorias" class="active">Categorias</button>
+      <button data-cfg="tipos">Tipos</button>
+      <button data-cfg="classes">Classes</button>
+      <button data-cfg="formas">Formas de pagamento</button>
+    </div>
+    <div class="card cfg-view active" id="cfg-categorias">
+      <div class="row-between"><div class="card-title" style="margin:0;">Categorias e subcategorias</div>
+        <button class="btn btn-primary btn-sm" id="btnNovaCategoria">+ Categoria</button></div>
+      <div id="categoriasList" style="margin-top:14px;"></div>
+    </div>
+    <div class="card cfg-view" id="cfg-tipos" style="display:none;">
+      <div class="row-between"><div class="card-title" style="margin:0;">Tipos de despesa</div>
+        <button class="btn btn-primary btn-sm" id="btnNovoTipo">+ Tipo</button></div>
+      <div id="tiposList" style="margin-top:14px;"></div>
+    </div>
+    <div class="card cfg-view" id="cfg-classes" style="display:none;">
+      <div class="row-between"><div class="card-title" style="margin:0;">Classes e metas de orçamento</div>
+        <button class="btn btn-primary btn-sm" id="btnNovaClasse">+ Classe</button></div>
+      <div id="classesList" style="margin-top:14px;"></div>
+    </div>
+    <div class="card cfg-view" id="cfg-formas" style="display:none;">
+      <div class="row-between"><div class="card-title" style="margin:0;">Formas de pagamento</div>
+        <button class="btn btn-primary btn-sm" id="btnNovaForma">+ Forma</button></div>
+      <div id="formasList" style="margin-top:14px;"></div>
+    </div>
+  </section>
 
-<script type="text/babel" data-presets="react,env">
-const { useState, useMemo, useEffect, useRef } = React;
+</div>
 
-/* ============================================================
-   ÍCONES (SVG próprios, sem dependência externa)
-   ============================================================ */
-const ICONS = {
-  Home: <path d="M4 11L12 4l8 7v8a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z"/>,
-  Car: <g><path d="M4 16v-5l2-5h12l2 5v5"/><circle cx="7.5" cy="16.5" r="1.5"/><circle cx="16.5" cy="16.5" r="1.5"/><path d="M4 16h16"/></g>,
-  ShoppingCart: <g><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M3 4h2l2.4 12.2a2 2 0 002 1.8h8.6a2 2 0 002-1.6L21 8H6"/></g>,
-  Zap: <path d="M13 2L4 14h6l-1 8 9-12h-6z"/>,
-  Droplet: <path d="M12 3s6 6.5 6 10.5A6 6 0 016 13.5C6 9.5 12 3 12 3z"/>,
-  Fuel: <g><path d="M4 21V8a2 2 0 012-2h6a2 2 0 012 2v13"/><path d="M3 21h11"/><path d="M14 10h2l3 3v5a1 1 0 01-2 0v-2a1 1 0 00-1-1h-2"/></g>,
-  Wrench: <path d="M14.7 6.3a4 4 0 00-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 005.4-5.4l-2.3 2.3-2-2z"/>,
-  Film: <g><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M7 4v16M17 4v16M3 9h4M17 9h4M3 15h4M17 15h4"/></g>,
-  Plane: <path d="M10.5 21l1.5-5 6.5-3.5-1-2-6.5 1.5L9 4l-2 1v6L2 13v2l5-1 1.5 6z"/>,
-  HeartPulse: <path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0112 5a5.5 5.5 0 019.5 7c-1 2-3 3.7-4.5 5l-1.5-3-2 3-1.5-4-2 1z"/>,
-  GraduationCap: <g><path d="M2 9l10-5 10 5-10 5-10-5z"/><path d="M6 11v4c0 1.5 3 3 6 3s6-1.5 6-3v-4"/></g>,
-  PiggyBank: <g><path d="M4 12a6 6 0 016-6h4a6 6 0 016 6v2h-2l-1 3H8l-1-3H5z"/><circle cx="15" cy="10" r="1"/><path d="M7 18v2M15 18v2"/></g>,
-  Check: <path d="M4 12l5 5L20 6"/>,
-  Clock: <g><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></g>,
-  AlertTriangle: <g><path d="M12 3L2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></g>,
-  ChevronDown: <path d="M6 9l6 6 6-6"/>,
-  ChevronRight: <path d="M9 6l6 6-6 6"/>,
-  ChevronLeft: <path d="M15 6l-6 6 6 6"/>,
-  Banknote: <g><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9h.01M18 15h.01"/></g>,
-  Landmark: <g><path d="M3 21h18M4 21V10M20 21V10M2 10l10-6 10 6M6 10v11M18 10v11M10 10v11M14 10v11"/></g>,
-  Smartphone: <g><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></g>,
-  Wallet: <g><path d="M3 7a2 2 0 012-2h11a2 2 0 012 2v3"/><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2H7"/><circle cx="16" cy="14" r="1.3"/></g>,
-  TrendingUp: <g><path d="M3 17l6-6 4 4 8-8"/><path d="M15 6h6v6"/></g>,
-  TrendingDown: <g><path d="M3 7l6 6 4-4 8 8"/><path d="M15 17h6v-6"/></g>,
-  CreditCard: <g><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></g>,
-  LayoutGrid: <g><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></g>,
-  PieChart: <g><circle cx="12" cy="12" r="9"/><path d="M12 3v9h9"/></g>,
-  Plus: <path d="M12 5v14M5 12h14"/>,
-  X: <path d="M6 6l12 12M18 6L6 18"/>,
-  Calendar: <g><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></g>,
-  AlertOctagon: <g><path d="M8 3h8l5 5v8l-5 5H8l-5-5V8z"/><path d="M12 8v5M12 16h.01"/></g>,
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalBox"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
+  onSnapshot, setDoc, getDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDjYRnGbQw_TE4t1JPlKq9j0Hy-Nw1mSFU",
+  authDomain: "financ-pessoais.firebaseapp.com",
+  projectId: "financ-pessoais",
+  storageBucket: "financ-pessoais.firebasestorage.app",
+  messagingSenderId: "224049517933",
+  appId: "1:224049517933:web:51457e9d35e1662f1e7664"
 };
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-function Icon({ name, size = 16, color, strokeWidth = 1.8, style }) {
-  const node = ICONS[name];
-  if (!node) return null;
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color || "currentColor"}
-      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
-      style={{ display: "block", flexShrink: 0, ...style }}>
-      {node}
-    </svg>
-  );
+/* ---------- estado em memória ---------- */
+const state = {
+  categorias: [], tipos: [], classes: [], contas: [], formas: [],
+  despesas: [], receitas: [], config: { mesesRetroativos: [] }
+};
+const openMonths = new Set();
+let seeded = false;
+
+/* ---------- helpers ---------- */
+const BRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
+const fmt = v => BRL.format(Number(v)||0);
+const byId = (arr,id) => arr.find(x=>x.id===id);
+const MESES_NOMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+function todayKey(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function addMonths(key, n){
+  let [y,m] = key.split('-').map(Number);
+  m += n;
+  y += Math.floor((m-1)/12);
+  m = ((m-1)%12+12)%12 + 1;
+  return `${y}-${String(m).padStart(2,'0')}`;
+}
+function monthLabel(key){
+  const [y,m] = key.split('-').map(Number);
+  return `${MESES_NOMES[m-1]} ${y}`;
+}
+function monthOrder(key){
+  const [y,m] = key.split('-').map(Number);
+  return y*12+m;
+}
+function getMonthsList(){
+  const start = todayKey();
+  const base = [];
+  for(let i=0;i<12;i++) base.push(addMonths(start,i));
+  const extra = new Set();
+  state.despesas.forEach(d=>extra.add(d.mes));
+  state.receitas.forEach(r=>extra.add(r.mes));
+  (state.config.mesesRetroativos||[]).forEach(m=>extra.add(m));
+  const all = new Set([...base, ...extra]);
+  return [...all].sort((a,b)=>monthOrder(a)-monthOrder(b));
+}
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+function svgIcon(name){
+  const icons = {
+    plus:'<path d="M12 5v14M5 12h14"/>',
+    edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    trash:'<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
+    chevron:'<path d="M6 9l6 6 6-6"/>',
+    x:'<path d="M18 6 6 18M6 6l12 12"/>'
+  };
+  return `<svg class="icon" viewBox="0 0 24 24">${icons[name]||''}</svg>`;
 }
 
-/* ============================================================
-   TOKENS
-   ============================================================ */
-const C = {
-  bg: "#101820",
-  surface: "#17222C",
-  surfaceRaised: "#1F2C38",
-  surfaceRaised2: "#243444",
-  hairline: "#2B3A47",
-  hairlineSoft: "#20303C",
-  brass: "#C6A15B",
-  brassSoft: "#8A6F3D",
-  brassDim: "#4A4029",
-  positive: "#5FA778",
-  positiveDim: "#264633",
-  negative: "#C1594A",
-  negativeDim: "#432722",
-  amber: "#D6A94A",
-  amberDim: "#3E3320",
-  text: "#EDE8DD",
-  textMuted: "#8FA0AC",
-  textFaint: "#5A6A76",
-};
+/* ---------- seed inicial ---------- */
+async function seedIfEmpty(){
+  if(seeded) return;
+  const configRef = doc(db,'meta','geral');
+  const snap = await getDoc(configRef);
+  if(!snap.exists()){
+    await setDoc(configRef, { mesesRetroativos: [], seeded:true });
+  } else if(snap.data().seeded){
+    seeded = true; return;
+  }
+  seeded = true;
 
-const fontDisplay = "'Fraunces', serif";
-const fontMono = "'IBM Plex Mono', monospace";
-const fontSans = "'IBM Plex Sans', sans-serif";
+  const catCol = collection(db,'categorias');
+  const catSnap = await getDoc(doc(db,'meta','catCheck')).catch(()=>null);
+  // só semeia se as coleções realmente estiverem vazias (checado via onSnapshot no primeiro load)
+  setTimeout(async ()=>{
+    if(state.categorias.length===0){
+      const defaults = [
+        {nome:'Casa', cor:'#5b9dff', icone:'🏠', subcategorias:['Energia','Água','Internet','Gás','Condomínio','Aluguel']},
+        {nome:'Alimentação', cor:'#ffc24b', icone:'🍽️', subcategorias:['Mercado','Restaurante','Delivery']},
+        {nome:'Transporte', cor:'#2fe0a8', icone:'🚗', subcategorias:['Combustível','Uber/Táxi','Manutenção','Estacionamento']},
+        {nome:'Saúde', cor:'#ff6b81', icone:'💊', subcategorias:['Plano de saúde','Farmácia','Consultas']},
+        {nome:'Lazer', cor:'#b98cff', icone:'🎮', subcategorias:['Streaming','Cinema','Viagens','Hobbies']},
+        {nome:'Outros', cor:'#9ba0c2', icone:'📦', subcategorias:['Diversos']},
+      ];
+      for(const c of defaults) await addDoc(catCol, c);
+    }
+    if(state.tipos.length===0){
+      for(const nome of ['Fixa','Variável','Mensal']) await addDoc(collection(db,'tipos'), {nome});
+    }
+    if(state.classes.length===0){
+      const defaults = [
+        {nome:'Fundamental', metaPercentual:50, cor:'#5b9dff'},
+        {nome:'Lazer', metaPercentual:30, cor:'#b98cff'},
+        {nome:'Investimento', metaPercentual:20, cor:'#2fe0a8'},
+      ];
+      for(const c of defaults) await addDoc(collection(db,'classes'), c);
+    }
+    if(state.formas.length===0){
+      for(const nome of ['Débito automático','Cartão de crédito','PIX','Boleto','Dinheiro']) await addDoc(collection(db,'formasPagamento'), {nome});
+    }
+    if(state.contas.length===0){
+      await addDoc(collection(db,'contas'), {nome:'Conta Principal', cor:'#2fe0a8', icone:'🏦', saldoInicial:0});
+    }
+  }, 900);
+}
 
-/* ============================================================
-   DADOS BASE
-   ============================================================ */
-const CATEGORY_TREE = [
-  { id: "casa", label: "Casa", icon: "Home", bucket: "essenciais", subs: [
-    { id: "energia", label: "Energia", icon: "Zap" },
-    { id: "agua", label: "Água", icon: "Droplet" },
-  ]},
-  { id: "carro", label: "Carro", icon: "Car", bucket: "essenciais", subs: [
-    { id: "combustivel", label: "Combustível", icon: "Fuel" },
-    { id: "manutencao", label: "Manutenção", icon: "Wrench" },
-  ]},
-  { id: "alimentacao", label: "Alimentação", icon: "ShoppingCart", bucket: "essenciais", subs: [
-    { id: "mercado", label: "Mercado", icon: "ShoppingCart" },
-    { id: "restaurante", label: "Restaurante", icon: "ShoppingCart" },
-  ]},
-  { id: "lazer", label: "Lazer", icon: "Film", bucket: "lazer", subs: [
-    { id: "streaming", label: "Streaming", icon: "Film" },
-    { id: "viagem", label: "Viagem", icon: "Plane" },
-  ]},
-  { id: "saude", label: "Saúde", icon: "HeartPulse", bucket: "essenciais", subs: [
-    { id: "farmacia", label: "Farmácia", icon: "HeartPulse" },
-  ]},
-  { id: "educacao", label: "Educação", icon: "GraduationCap", bucket: "lazer", subs: [
-    { id: "cursos", label: "Cursos", icon: "GraduationCap" },
-  ]},
-  { id: "investimentos", label: "Investimentos", icon: "PiggyBank", bucket: "investimentos", subs: [
-    { id: "reserva", label: "Reserva de emergência", icon: "PiggyBank" },
-  ]},
-];
+/* ---------- listeners firestore ---------- */
+function listen(colName, stateKey, renderFn){
+  onSnapshot(collection(db,colName), snap=>{
+    state[stateKey] = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    renderFn();
+  }, err=>{ console.error(colName, err); toast('Erro ao carregar '+colName+'. Verifique as regras do Firestore.'); });
+}
 
-const CAT_LOOKUP = {};
-CATEGORY_TREE.forEach(c => {
-  CAT_LOOKUP[c.id] = c;
-  c.subs.forEach(s => { CAT_LOOKUP[s.id] = { ...s, parentId: c.id, bucket: c.bucket }; });
+onSnapshot(doc(db,'meta','geral'), snap=>{
+  state.config = snap.exists()? snap.data() : {mesesRetroativos:[]};
+  renderDespesas();
 });
 
-const PAY_METHODS = [
-  { id: "pix", label: "Pix", icon: "Smartphone" },
-  { id: "debito", label: "Débito", icon: "Landmark" },
-  { id: "credito", label: "Crédito", icon: "CreditCard" },
-  { id: "dinheiro", label: "Dinheiro", icon: "Banknote" },
-];
+listen('categorias','categorias', ()=>{ renderDespesas(); renderConfigCategorias(); });
+listen('tipos','tipos', ()=>{ renderDespesas(); renderConfigTipos(); });
+listen('classes','classes', ()=>{ renderDespesas(); renderConfigClasses(); });
+listen('formasPagamento','formas', ()=>{ renderDespesas(); renderConfigFormas(); });
+listen('contas','contas', ()=>{ renderContas(); renderDespesas(); renderReceitas(); renderSaldoTotal(); });
+listen('despesas','despesas', ()=>{ renderDespesas(); renderContas(); renderSaldoTotal(); });
+listen('receitas','receitas', ()=>{ renderReceitas(); renderContas(); renderSaldoTotal(); });
 
-const MONTH_NAMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+seedIfEmpty();
 
-const todayISO = () => new Date().toISOString().slice(0, 10);
-const addMonths = (iso, n) => {
-  const d = new Date(iso + "T00:00:00");
-  d.setMonth(d.getMonth() + n);
-  return d.toISOString().slice(0, 10);
-};
-const fmtBRL = (v) =>
-  (v < 0 ? "-" : "") + "R$ " + Math.abs(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtDate = (iso) => {
-  if (!iso) return "—";
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}`;
-};
-const monthLabel = (key) => {
-  const [y, m] = key.split("-");
-  return `${MONTH_NAMES[parseInt(m, 10) - 1]} de ${y}`;
-};
+/* ---------- saldo total ---------- */
+function saldoConta(contaId){
+  const conta = byId(state.contas, contaId);
+  if(!conta) return 0;
+  const receitasConta = state.receitas.filter(r=>r.contaId===contaId).reduce((s,r)=>s+Number(r.valor||0),0);
+  const despesasPagas = state.despesas.filter(d=>d.contaId===contaId && d.pago).reduce((s,d)=>s+Number(d.valor||0),0);
+  return Number(conta.saldoInicial||0) + receitasConta - despesasPagas;
+}
+function renderSaldoTotal(){
+  const total = state.contas.reduce((s,c)=>s+saldoConta(c.id),0);
+  const el = document.getElementById('saldoTotalDisplay');
+  el.textContent = fmt(total);
+  el.className = 'val mono ' + (total>=0?'pos':'neg');
+}
 
-const initialCards = [
-  { name: "Nubank", limit: 5000, closingDay: 25, dueDay: 5, color: "#8A5CF6" },
-  { name: "Inter Gold", limit: 3500, closingDay: 10, dueDay: 17, color: "#FF7A1A" },
-];
+/* ---------- DESPESAS ---------- */
+function renderDespesas(){
+  renderClassesResumo();
+  const container = document.getElementById('mesesContainer');
+  const months = getMonthsList();
+  container.innerHTML = months.map(mes=>{
+    const despesasMes = state.despesas.filter(d=>d.mes===mes);
+    const total = despesasMes.reduce((s,d)=>s+Number(d.valor||0),0);
+    const pago = despesasMes.filter(d=>d.pago).reduce((s,d)=>s+Number(d.valor||0),0);
+    const pendente = total-pago;
+    const pct = total>0 ? (pago/total)*100 : 0;
+    const r = 20, circ = 2*Math.PI*r;
+    const offset = circ - (pct/100)*circ;
+    const isOpen = openMonths.has(mes);
+    const rows = despesasMes.slice().sort((a,b)=>(a.vencimento||0)-(b.vencimento||0)).map(d=>expenseRowHtml(d)).join('');
+    return `
+    <div class="month-card ${isOpen?'open':''}" data-mes="${mes}">
+      <div class="month-head" data-toggle="${mes}">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 48 48">
+            <circle class="ring-bg" cx="24" cy="24" r="${r}" fill="none" stroke-width="5"/>
+            <circle class="ring-fg" cx="24" cy="24" r="${r}" fill="none" stroke-width="5"
+              stroke-dasharray="${circ}" stroke-dashoffset="${total>0?offset:circ}"/>
+          </svg>
+        </div>
+        <div class="month-info">
+          <div class="name">${monthLabel(mes)}</div>
+          <div class="sub">${despesasMes.length} despesa${despesasMes.length!==1?'s':''}</div>
+        </div>
+        <div class="month-stats">
+          <div class="stat"><div class="k">Total</div><div class="v mono">${fmt(total)}</div></div>
+          <div class="stat"><div class="k">Pago</div><div class="v mono pago">${fmt(pago)}</div></div>
+          <div class="stat"><div class="k">Pendente</div><div class="v mono pendente">${fmt(pendente)}</div></div>
+        </div>
+        <div class="chevron">${svgIcon('chevron')}</div>
+      </div>
+      <div class="month-body">
+        <div class="row-between" style="margin-bottom:10px;">
+          <div></div>
+          <button class="btn btn-primary btn-sm" data-add-despesa="${mes}">${svgIcon('plus')} Nova despesa</button>
+        </div>
+        ${rows || '<div class="empty-msg">Nenhuma despesa neste mês ainda.</div>'}
+      </div>
+    </div>`;
+  }).join('');
 
-function seedTransactions() {
-  const t = [];
-  const push = (obj) => t.push({ status: "pago", ...obj });
-
-  push({ type: "entrada", description: "Salário", amount: 7000, date: "2026-06-05", dueDate: "2026-06-05", category: "salario", categoryLabel: "Salário", bucket: null, recurrence: "fixa", paymentMethod: "transferencia" });
-  push({ type: "saida", description: "Conta de luz", amount: 198, date: "2026-06-09", dueDate: "2026-06-10", category: "energia", categoryLabel: "Casa > Energia", bucket: "essenciais", recurrence: "fixa", paymentMethod: "pix" });
-  push({ type: "saida", description: "Mercado da semana", amount: 310, date: "2026-06-14", dueDate: "2026-06-14", category: "mercado", categoryLabel: "Alimentação > Mercado", bucket: "essenciais", recurrence: "variavel", paymentMethod: "debito" });
-
-  push({ type: "entrada", description: "Salário", amount: 7200, date: "2026-07-05", dueDate: "2026-07-05", category: "salario", categoryLabel: "Salário", bucket: null, recurrence: "fixa", paymentMethod: "transferencia" });
-  push({ type: "entrada", description: "Freelance design", amount: 950, date: "2026-07-14", dueDate: "2026-07-14", category: "freelance", categoryLabel: "Freelance", bucket: null, recurrence: "esporadica", paymentMethod: "pix" });
-
-  push({ type: "saida", description: "Conta de luz", amount: 210.4, date: "2026-07-08", dueDate: "2026-07-10", category: "energia", categoryLabel: "Casa > Energia", bucket: "essenciais", recurrence: "fixa", paymentMethod: "pix" });
-  push({ type: "saida", description: "Conta de água", amount: 88.2, date: "2026-07-11", dueDate: "2026-07-10", category: "agua", categoryLabel: "Casa > Água", bucket: "essenciais", recurrence: "fixa", paymentMethod: "pix", status: "atrasado" });
-  push({ type: "saida", description: "Combustível", amount: 260, date: "2026-07-15", dueDate: "2026-07-15", category: "combustivel", categoryLabel: "Carro > Combustível", bucket: "essenciais", recurrence: "variavel", paymentMethod: "debito" });
-  push({ type: "saida", description: "Revisão do carro", amount: 480, date: "2026-07-18", dueDate: "2026-07-18", category: "manutencao", categoryLabel: "Carro > Manutenção", bucket: "essenciais", recurrence: "esporadica", paymentMethod: "debito" });
-  push({ type: "saida", description: "Mercado da semana", amount: 340.9, date: "2026-07-06", dueDate: "2026-07-06", category: "mercado", categoryLabel: "Alimentação > Mercado", bucket: "essenciais", recurrence: "variavel", paymentMethod: "debito" });
-  push({ type: "saida", description: "Mercado da semana", amount: 298.5, date: "2026-07-20", dueDate: "2026-07-20", category: "mercado", categoryLabel: "Alimentação > Mercado", bucket: "essenciais", recurrence: "variavel", paymentMethod: "debito" });
-  push({ type: "saida", description: "Rodízio japonês", amount: 165, date: "2026-07-12", dueDate: "2026-07-12", category: "restaurante", categoryLabel: "Alimentação > Restaurante", bucket: "essenciais", recurrence: "esporadica", paymentMethod: "credito", cardId: "__card1__" });
-  push({ type: "saida", description: "Streaming (Netflix)", amount: 44.9, date: "2026-07-02", dueDate: "2026-07-02", category: "streaming", categoryLabel: "Lazer > Streaming", bucket: "lazer", recurrence: "fixa", paymentMethod: "credito", cardId: "__card1__" });
-  push({ type: "saida", description: "Farmácia", amount: 76.3, date: "2026-07-09", dueDate: "2026-07-09", category: "farmacia", categoryLabel: "Saúde > Farmácia", bucket: "essenciais", recurrence: "variavel", paymentMethod: "debito" });
-  push({ type: "saida", description: "Curso de inglês", amount: 199, date: "2026-07-03", dueDate: "2026-07-03", category: "cursos", categoryLabel: "Educação > Cursos", bucket: "lazer", recurrence: "fixa", paymentMethod: "pix" });
-  push({ type: "saida", description: "Aporte reserva", amount: 700, date: "2026-07-06", dueDate: "2026-07-06", category: "reserva", categoryLabel: "Investimentos > Reserva", bucket: "investimentos", recurrence: "fixa", paymentMethod: "transferencia" });
-  push({ type: "saida", description: "Assinatura academia", amount: 120, date: "2026-07-01", dueDate: "2026-07-01", category: "streaming", categoryLabel: "Lazer > Streaming", bucket: "lazer", recurrence: "fixa", paymentMethod: "debito" });
-
-  push({ type: "saida", description: "Conta de luz (ago)", amount: 195, date: null, dueDate: "2026-08-10", category: "energia", categoryLabel: "Casa > Energia", bucket: "essenciais", recurrence: "fixa", paymentMethod: "pix", status: "pendente" });
-  push({ type: "entrada", description: "Salário", amount: 7200, date: null, dueDate: "2026-08-05", category: "salario", categoryLabel: "Salário", bucket: null, recurrence: "fixa", paymentMethod: "transferencia", status: "pendente" });
-
-  const purchaseId = "p-notebook-seed";
-  const total = 3600, n = 6;
-  for (let i = 0; i < n; i++) {
-    push({
-      type: "saida",
-      description: `Notebook (${i + 1}/${n})`,
-      amount: total / n,
-      date: i === 0 ? "2026-07-04" : null,
-      dueDate: addMonths("2026-08-05", i),
-      category: "manutencao",
-      categoryLabel: "Carro > Manutenção",
-      bucket: "essenciais",
-      recurrence: "esporadica",
-      paymentMethod: "credito",
-      cardId: "__card1__",
-      purchaseId,
-      installment: [i + 1, n],
-      status: i === 0 ? "pago" : "pendente",
+  container.querySelectorAll('[data-toggle]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const mes = el.dataset.toggle;
+      if(openMonths.has(mes)) openMonths.delete(mes); else openMonths.add(mes);
+      renderDespesas();
     });
-  }
-
-  return t;
-}
-
-/* ============================================================
-   PEQUENOS COMPONENTES DE UI
-   ============================================================ */
-function Pill({ children, tone = "neutral" }) {
-  const map = {
-    neutral: { bg: C.surfaceRaised, fg: C.textMuted, bd: C.hairline },
-    pago: { bg: C.positiveDim, fg: C.positive, bd: C.positive },
-    atrasado: { bg: C.negativeDim, fg: C.negative, bd: C.negative },
-    pendente: { bg: C.amberDim, fg: C.amber, bd: C.amber },
-  };
-  const s = map[tone] || map.neutral;
-  return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", gap: 4,
-      fontFamily: fontSans, fontSize: 11, fontWeight: 600, letterSpacing: "0.03em",
-      textTransform: "uppercase", padding: "3px 8px", borderRadius: 999,
-      background: s.bg, color: s.fg, border: `1px solid ${s.bd}33`,
-    }}>{children}</span>
-  );
-}
-
-function StatusPill({ status }) {
-  if (status === "pago") return <Pill tone="pago"><Icon name="Check" size={11} /> Pago</Pill>;
-  if (status === "atrasado") return <Pill tone="atrasado"><Icon name="AlertTriangle" size={11} /> Atrasado</Pill>;
-  return <Pill tone="pendente"><Icon name="Clock" size={11} /> Pendente</Pill>;
-}
-
-/* ============================================================
-   GRÁFICOS CUSTOMIZADOS (sem dependências externas)
-   ============================================================ */
-function HBarChart({ data, colors }) {
-  const max = Math.max(...data.map(d => d.value), 1);
-  if (data.length === 0) return <div style={{ color: C.textFaint, fontFamily: fontSans, fontSize: 13, padding: "20px 0" }}>Sem dados no período.</div>;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {data.map((d, i) => (
-        <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 96, fontSize: 12, color: C.textMuted, fontFamily: fontSans, textAlign: "right", flexShrink: 0 }}>{d.name}</div>
-          <div style={{ flex: 1, background: C.surfaceRaised2, borderRadius: 4, height: 14, position: "relative", overflow: "hidden" }}>
-            <div style={{ width: `${(d.value / max) * 100}%`, height: "100%", borderRadius: 4, background: colors[i % colors.length] }} />
-          </div>
-          <div style={{ width: 92, fontFamily: fontMono, fontSize: 11.5, color: C.text, flexShrink: 0 }}>{fmtBRL(d.value)}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function DonutChart({ data, colors, size = 132, thickness = 20 }) {
-  const total = data.reduce((s, d) => s + d.value, 0) || 1;
-  const r = (size - thickness) / 2;
-  const circumference = 2 * Math.PI * r;
-  let offset = 0;
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <g transform={`translate(${size / 2},${size / 2}) rotate(-90)`}>
-        <circle r={r} fill="none" stroke={C.surfaceRaised2} strokeWidth={thickness} />
-        {data.map((d, i) => {
-          const frac = d.value / total;
-          const dash = frac * circumference;
-          const el = (
-            <circle key={i} r={r} fill="none" stroke={colors[i % colors.length]} strokeWidth={thickness}
-              strokeDasharray={`${dash} ${circumference - dash}`} strokeDashoffset={-offset} strokeLinecap="butt" />
-          );
-          offset += dash;
-          return el;
-        })}
-      </g>
-    </svg>
-  );
-}
-
-/* ============================================================
-   LIVRO-CAIXA (saldo diário)
-   ============================================================ */
-function LedgerStrip({ days, monthTitle }) {
-  const max = Math.max(...days.map(d => Math.abs(d.net)), 1);
-  return (
-    <div style={{ background: C.surface, border: `1px solid ${C.hairline}`, borderRadius: 12, padding: "20px 22px 14px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
-        <div style={{ fontFamily: fontDisplay, fontSize: 18, color: C.text, fontStyle: "italic" }}>
-          Livro-caixa · saldo diário
-        </div>
-        <div style={{ fontFamily: fontSans, fontSize: 11, color: C.textFaint, letterSpacing: "0.04em" }}>
-          {monthTitle}
-        </div>
-      </div>
-      <div style={{ position: "relative", height: 92, display: "flex", alignItems: "flex-end", gap: 3 }}>
-        <div style={{ position: "absolute", left: 0, right: 0, top: "50%", borderTop: `1px dashed ${C.hairline}` }} />
-        {days.map((d, i) => {
-          const h = Math.max(4, (Math.abs(d.net) / max) * 38);
-          const up = d.net >= 0;
-          return (
-            <div key={i} title={`${d.date}: ${fmtBRL(d.net)}`} style={{
-              flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-              justifyContent: up ? "flex-end" : "flex-start", height: "100%", position: "relative",
-            }}>
-              <div style={{
-                width: "100%", maxWidth: 10, height: h, borderRadius: 2,
-                background: up ? C.positive : C.negative, opacity: 0.85, alignSelf: "center",
-                marginTop: up ? "auto" : 0, marginBottom: up ? 0 : "auto",
-              }} />
-            </div>
-          );
-        })}
-      </div>
-      <div style={{ display: "flex", gap: 3, marginTop: 6 }}>
-        {days.map((d, i) => (
-          <div key={i} style={{ flex: 1, textAlign: "center", fontFamily: fontMono, fontSize: 9, color: C.textFaint }}>
-            {i % 3 === 0 ? fmtDate(d.date) : ""}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ============================================================
-   DASHBOARD
-   ============================================================ */
-function Dashboard({ transactions, cards, period, setPeriod }) {
-  const now = useMemo(() => {
-    const iso = todayISO();
-    return new Date(iso + "T12:00:00");
-  }, []);
-  const curY = now.getFullYear(), curM = now.getMonth();
-
-  const filtered = useMemo(() => {
-    return transactions.filter(t => {
-      const ref = t.date || t.dueDate;
-      if (!ref) return false;
-      const d = new Date(ref + "T00:00:00");
-      if (period === "mes") return d.getMonth() === curM && d.getFullYear() === curY;
-      if (period === "semana") {
-        const diff = (now - d) / 86400000;
-        return diff >= 0 && diff <= 7;
+  });
+  container.querySelectorAll('[data-add-despesa]').forEach(el=>{
+    el.addEventListener('click', (e)=>{ e.stopPropagation(); openDespesaModal(null, el.dataset.addDespesa); });
+  });
+  container.querySelectorAll('[data-toggle-status]').forEach(el=>{
+    el.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      const id = el.dataset.toggleStatus;
+      const d = byId(state.despesas, id);
+      await updateDoc(doc(db,'despesas',id), { pago: !d.pago });
+    });
+  });
+  container.querySelectorAll('[data-edit-despesa]').forEach(el=>{
+    el.addEventListener('click', (e)=>{ e.stopPropagation(); openDespesaModal(el.dataset.editDespesa); });
+  });
+  container.querySelectorAll('[data-del-despesa]').forEach(el=>{
+    el.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      if(confirm('Excluir esta despesa?')){
+        await deleteDoc(doc(db,'despesas', el.dataset.delDespesa));
+        toast('Despesa excluída.');
       }
-      if (period === "dia") return ref === todayISO();
-      return true;
     });
-  }, [transactions, period]);
+  });
+}
 
-  const entradas = filtered.filter(t => t.type === "entrada").reduce((s, t) => s + t.amount, 0);
-  const saidas = filtered.filter(t => t.type === "saida").reduce((s, t) => s + t.amount, 0);
-  const saldo = entradas - saidas;
+function expenseRowHtml(d){
+  const cat = byId(state.categorias, d.categoriaId);
+  const tipo = byId(state.tipos, d.tipoId);
+  const classe = byId(state.classes, d.classeId);
+  const conta = byId(state.contas, d.contaId);
+  const forma = byId(state.formas, d.formaPagamentoId);
+  return `
+    <div class="expense-row">
+      <div class="icon-badge" style="background:${cat?cat.cor+'22':'#33385522'}">${cat?cat.icone:'💳'}</div>
+      <div class="exp-main">
+        <div class="desc">${d.descricao||''}</div>
+        <div class="exp-tags">
+          ${cat?`<span class="tag">${cat.nome}${d.subcategoria?' • '+d.subcategoria:''}</span>`:''}
+          ${tipo?`<span class="tag">${tipo.nome}</span>`:''}
+          ${classe?`<span class="tag">${classe.nome}</span>`:''}
+          ${conta?`<span class="tag">${conta.icone||''} ${conta.nome}</span>`:''}
+          ${forma?`<span class="tag">${forma.nome}</span>`:''}
+        </div>
+      </div>
+      <div class="exp-val">${fmt(d.valor)}</div>
+      <button class="status-btn ${d.pago?'pago':'pendente'}" data-toggle-status="${d.id}">${d.pago?'Pago':'Pendente'}</button>
+      <div class="exp-actions">
+        <button class="btn btn-icon" data-edit-despesa="${d.id}">${svgIcon('edit')}</button>
+        <button class="btn btn-icon" data-del-despesa="${d.id}" style="color:var(--rose);">${svgIcon('trash')}</button>
+      </div>
+    </div>`;
+}
 
-  const paidDays = new Set(filtered.filter(t => t.type === "saida" && t.date).map(t => t.date)).size || 1;
-  const mediaDiaria = saidas / paidDays;
+function renderClassesResumo(){
+  const card = document.getElementById('classesResumoCard');
+  const body = document.getElementById('classesResumoBody');
+  if(state.classes.length===0){ card.style.display='none'; return; }
+  card.style.display='block';
+  const mes = todayKey();
+  const totalReceitas = state.receitas.filter(r=>r.mes===mes).reduce((s,r)=>s+Number(r.valor||0),0);
+  body.innerHTML = state.classes.map(c=>{
+    const gasto = state.despesas.filter(d=>d.classeId===c.id && d.mes===mes).reduce((s,d)=>s+Number(d.valor||0),0);
+    const realPct = totalReceitas>0 ? (gasto/totalReceitas*100) : 0;
+    const meta = Number(c.metaPercentual||0);
+    return `
+      <div class="bar-row">
+        <div class="bl"><span>${c.nome}</span><span>${fmt(gasto)} • real ${realPct.toFixed(0)}% / meta ${meta}%</span></div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${Math.min(realPct,100)}%; background:${c.cor||'#2fe0a8'};"></div>
+          <div class="bar-target" style="left:${Math.min(meta,100)}%;"></div>
+        </div>
+      </div>`;
+  }).join('') + (totalReceitas===0?'<div class="empty-msg">Cadastre receitas no mês atual para calcular os percentuais.</div>':'');
+}
 
-  const byCategory = useMemo(() => {
-    const map = {};
-    filtered.filter(t => t.type === "saida").forEach(t => {
-      const key = (t.categoryLabel || "Outros").split(" > ")[0];
-      map[key] = (map[key] || 0) + t.amount;
-    });
-    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-  }, [filtered]);
-
-  const byMethod = useMemo(() => {
-    const map = {};
-    filtered.filter(t => t.type === "saida").forEach(t => {
-      map[t.paymentMethod] = (map[t.paymentMethod] || 0) + t.amount;
-    });
-    return Object.entries(map).map(([id, value]) => ({
-      id, value, label: PAY_METHODS.find(m => m.id === id)?.label || id,
-    }));
-  }, [filtered]);
-
-  const pontualidade = useMemo(() => {
-    const paid = filtered.filter(t => t.type === "saida" && t.status === "pago");
-    let antecipado = 0, noPrazo = 0, atrasado = 0;
-    paid.forEach(t => {
-      if (t.date < t.dueDate) antecipado++;
-      else if (t.date === t.dueDate) noPrazo++;
-      else atrasado++;
-    });
-    atrasado += filtered.filter(t => t.status === "atrasado").length;
-    return { antecipado, noPrazo, atrasado, total: antecipado + noPrazo + atrasado || 1 };
-  }, [filtered]);
-
-  const days = useMemo(() => {
-    const arr = [];
-    const daysInMonth = new Date(curY, curM + 1, 0).getDate();
-    for (let d = 1; d <= daysInMonth; d++) {
-      const date = `${curY}-${String(curM + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      const dayTx = transactions.filter(t => t.date === date);
-      const net = dayTx.reduce((s, t) => s + (t.type === "entrada" ? t.amount : -t.amount), 0);
-      arr.push({ date, net });
+/* ---------- RECEITAS ---------- */
+function renderReceitas(){
+  const container = document.getElementById('receitasContainer');
+  const months = getMonthsList();
+  const withData = months.filter(m => state.receitas.some(r=>r.mes===m)).length>0 ? months : months.slice(0,12);
+  container.innerHTML = withData.map(mes=>{
+    const receitasMes = state.receitas.filter(r=>r.mes===mes);
+    if(receitasMes.length===0 && !openMonths.has('r-'+mes)) {
+      // ainda mostra o mês, colapsado, para manter consistência
     }
-    return arr;
-  }, [transactions]);
-
-  const COLORS = [C.brass, C.positive, C.amber, "#7C8CA6", C.negative, "#8A5CF6"];
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <div style={{ fontFamily: fontSans, fontSize: 11, letterSpacing: "0.08em", color: C.textFaint, textTransform: "uppercase" }}>Painel analítico</div>
-          <h1 style={{ fontFamily: fontDisplay, fontSize: 30, color: C.text, margin: "2px 0 0", fontWeight: 600 }}>Visão geral</h1>
+    const total = receitasMes.reduce((s,r)=>s+Number(r.valor||0),0);
+    const isOpen = openMonths.has('r-'+mes);
+    const rows = receitasMes.map(r=>{
+      const conta = byId(state.contas, r.contaId);
+      return `
+      <div class="expense-row">
+        <div class="icon-badge" style="background:var(--emerald-dim)">💰</div>
+        <div class="exp-main">
+          <div class="desc">${r.descricao||''}</div>
+          <div class="exp-tags"><span class="tag">${conta?(conta.icone+' '+conta.nome):'Sem conta'}</span></div>
         </div>
-        <div style={{ display: "flex", gap: 6, background: C.surface, padding: 4, borderRadius: 10, border: `1px solid ${C.hairline}` }}>
-          {[["dia", "Dia"], ["semana", "Semana"], ["mes", "Mês"]].map(([id, label]) => (
-            <button key={id} onClick={() => setPeriod(id)} style={{
-              fontFamily: fontSans, fontSize: 12.5, fontWeight: 600, padding: "7px 14px", borderRadius: 7,
-              border: "none", cursor: "pointer",
-              background: period === id ? C.brass : "transparent",
-              color: period === id ? "#1a1509" : C.textMuted,
-            }}>{label}</button>
-          ))}
+        <div class="exp-val" style="color:var(--emerald)">${fmt(r.valor)}</div>
+        <div class="exp-actions">
+          <button class="btn btn-icon" data-edit-receita="${r.id}">${svgIcon('edit')}</button>
+          <button class="btn btn-icon" data-del-receita="${r.id}" style="color:var(--rose);">${svgIcon('trash')}</button>
         </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12 }}>
-        <KpiCard label="Entradas" value={entradas} iconName="TrendingUp" tone="positive" />
-        <KpiCard label="Saídas" value={saidas} iconName="TrendingDown" tone="negative" />
-        <KpiCard label="Saldo do período" value={saldo} iconName="Wallet" tone={saldo >= 0 ? "positive" : "negative"} />
-        <KpiCard label="Média diária de gasto" value={mediaDiaria} iconName="PieChart" tone="neutral" />
-      </div>
-
-      <LedgerStrip days={days} monthTitle={monthLabel(`${curY}-${String(curM + 1).padStart(2, "0")}`).toUpperCase()} />
-
-      <div style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 14 }}>
-        <div style={{ background: C.surface, border: `1px solid ${C.hairline}`, borderRadius: 12, padding: "18px 20px" }}>
-          <SectionTitle>Gastos por categoria</SectionTitle>
-          <div style={{ marginTop: 14 }}>
-            <HBarChart data={byCategory} colors={COLORS} />
-          </div>
+      </div>`;
+    }).join('');
+    return `
+    <div class="month-card ${isOpen?'open':''}">
+      <div class="month-head" data-toggle-r="${mes}">
+        <div class="month-info">
+          <div class="name">${monthLabel(mes)}</div>
+          <div class="sub">${receitasMes.length} receita${receitasMes.length!==1?'s':''}</div>
         </div>
-
-        <div style={{ background: C.surface, border: `1px solid ${C.hairline}`, borderRadius: 12, padding: "18px 20px" }}>
-          <SectionTitle>Meio de pagamento</SectionTitle>
-          <div style={{ height: 190, display: "flex", alignItems: "center", marginTop: 6 }}>
-            <div style={{ flexShrink: 0 }}><DonutChart data={byMethod} colors={COLORS} /></div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1, marginLeft: 16 }}>
-              {byMethod.map((m, i) => {
-                const iconName = PAY_METHODS.find(p => p.id === m.id)?.icon || "Banknote";
-                return (
-                  <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: fontSans, fontSize: 12.5, color: C.textMuted }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 2, background: COLORS[i % COLORS.length], flexShrink: 0 }} />
-                    <Icon name={iconName} size={13} /> {m.label}
-                    <span style={{ marginLeft: "auto", fontFamily: fontMono, color: C.text }}>{fmtBRL(m.value)}</span>
-                  </div>
-                );
-              })}
-              {byMethod.length === 0 && <div style={{ color: C.textFaint, fontFamily: fontSans, fontSize: 12.5 }}>Sem dados.</div>}
-            </div>
-          </div>
+        <div class="month-stats">
+          <div class="stat"><div class="k">Total</div><div class="v mono" style="color:var(--emerald)">${fmt(total)}</div></div>
         </div>
+        <div class="chevron">${svgIcon('chevron')}</div>
       </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div style={{ background: C.surface, border: `1px solid ${C.hairline}`, borderRadius: 12, padding: "18px 20px" }}>
-          <SectionTitle>Pontualidade de pagamentos</SectionTitle>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
-            {[
-              ["Antecipado", pontualidade.antecipado, C.positive],
-              ["No prazo", pontualidade.noPrazo, C.brass],
-              ["Em atraso", pontualidade.atrasado, C.negative],
-            ].map(([label, val, color]) => (
-              <div key={label}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontFamily: fontSans, fontSize: 12.5, color: C.textMuted, marginBottom: 4 }}>
-                  <span>{label}</span><span style={{ fontFamily: fontMono, color: C.text }}>{val}</span>
-                </div>
-                <div style={{ height: 6, background: C.surfaceRaised2, borderRadius: 3, overflow: "hidden" }}>
-                  <div style={{ width: `${(val / pontualidade.total) * 100}%`, height: "100%", background: color }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ background: C.surface, border: `1px solid ${C.hairline}`, borderRadius: 12, padding: "18px 20px" }}>
-          <SectionTitle>Limite dos cartões</SectionTitle>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
-            {cards.map(card => {
-              const used = transactions
-                .filter(t => t.cardId === card.id && t.type === "saida")
-                .reduce((s, t) => s + t.amount, 0);
-              const pct = Math.min(100, (used / card.limit) * 100);
-              return (
-                <div key={card.id}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontFamily: fontSans, fontSize: 12.5, color: C.textMuted, marginBottom: 4 }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: card.color }} /> {card.name}
-                    </span>
-                    <span style={{ fontFamily: fontMono, color: C.text }}>{fmtBRL(card.limit - used)} livre</span>
-                  </div>
-                  <div style={{ height: 6, background: C.surfaceRaised2, borderRadius: 3, overflow: "hidden" }}>
-                    <div style={{ width: `${pct}%`, height: "100%", background: card.color }} />
-                  </div>
-                </div>
-              );
-            })}
-            {cards.length === 0 && <div style={{ color: C.textFaint, fontFamily: fontSans, fontSize: 12.5 }}>Nenhum cartão cadastrado.</div>}
-          </div>
-        </div>
+      <div class="month-body">
+        ${rows || '<div class="empty-msg">Nenhuma receita neste mês ainda.</div>'}
       </div>
-    </div>
-  );
-}
+    </div>`;
+  }).join('');
 
-function KpiCard({ label, value, iconName, tone }) {
-  const color = tone === "positive" ? C.positive : tone === "negative" ? C.negative : C.brass;
-  return (
-    <div style={{ background: C.surface, border: `1px solid ${C.hairline}`, borderRadius: 12, padding: "16px 18px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontFamily: fontSans, fontSize: 11.5, color: C.textFaint, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</span>
-        <Icon name={iconName} size={15} color={color} />
-      </div>
-      <div style={{ fontFamily: fontMono, fontSize: 22, color: C.text, marginTop: 8, fontVariantNumeric: "tabular-nums" }}>
-        {fmtBRL(value)}
-      </div>
-    </div>
-  );
-}
-
-function SectionTitle({ children }) {
-  return <div style={{ fontFamily: fontDisplay, fontSize: 15.5, fontStyle: "italic", color: C.text }}>{children}</div>;
-}
-
-/* ============================================================
-   LANÇAMENTOS (lista + formulário)
-   ============================================================ */
-function Transactions({ transactions, addTransaction }) {
-  const [tab, setTab] = useState("saida");
-  const [open, setOpen] = useState(false);
-
-  const list = transactions
-    .filter(t => t.type === tab)
-    .sort((a, b) => (b.date || b.dueDate || "").localeCompare(a.date || a.dueDate || ""));
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <div style={{ fontFamily: fontSans, fontSize: 11, letterSpacing: "0.08em", color: C.textFaint, textTransform: "uppercase" }}>Fluxo de caixa</div>
-          <h1 style={{ fontFamily: fontDisplay, fontSize: 30, color: C.text, margin: "2px 0 0", fontWeight: 600 }}>Lançamentos</h1>
-        </div>
-        <button onClick={() => setOpen(true)} style={btnPrimary}>
-          <Icon name="Plus" size={15} /> Novo lançamento
-        </button>
-      </div>
-
-      <div style={{ display: "flex", gap: 6, background: C.surface, padding: 4, borderRadius: 10, border: `1px solid ${C.hairline}`, width: "fit-content" }}>
-        {[["entrada", "Recebimentos"], ["saida", "Despesas"]].map(([id, label]) => (
-          <button key={id} onClick={() => setTab(id)} style={{
-            fontFamily: fontSans, fontSize: 12.5, fontWeight: 600, padding: "7px 16px", borderRadius: 7,
-            border: "none", cursor: "pointer",
-            background: tab === id ? C.brass : "transparent",
-            color: tab === id ? "#1a1509" : C.textMuted,
-          }}>{label}</button>
-        ))}
-      </div>
-
-      <TransactionTable list={list} />
-
-      {open && (
-        <TransactionModal
-          onClose={() => setOpen(false)}
-          onSave={(tx) => { addTransaction(tx); setOpen(false); }}
-          defaultType={tab}
-        />
-      )}
-    </div>
-  );
-}
-
-function TransactionTable({ list }) {
-  return (
-    <div style={{ background: C.surface, border: `1px solid ${C.hairline}`, borderRadius: 12, overflow: "hidden" }}>
-      <div style={{
-        display: "grid", gridTemplateColumns: "2fr 1.3fr 1fr 1fr 0.9fr 0.9fr", gap: 8,
-        padding: "10px 20px", borderBottom: `1px solid ${C.hairline}`,
-        fontFamily: fontSans, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em", color: C.textFaint,
-      }}>
-        <span>Descrição</span><span>Categoria</span><span>Vencimento</span><span>Natureza</span><span>Pagamento</span><span style={{ textAlign: "right" }}>Valor</span>
-      </div>
-      {list.length === 0 && (
-        <div style={{ padding: 30, textAlign: "center", color: C.textFaint, fontFamily: fontSans, fontSize: 13 }}>
-          Nenhum lançamento nesta aba ainda.
-        </div>
-      )}
-      {list.map(t => {
-        const method = PAY_METHODS.find(m => m.id === t.paymentMethod);
-        return (
-          <div key={t.id} style={{
-            display: "grid", gridTemplateColumns: "2fr 1.3fr 1fr 1fr 0.9fr 0.9fr", gap: 8,
-            padding: "13px 20px", borderBottom: `1px solid ${C.hairlineSoft}`, alignItems: "center",
-            fontFamily: fontSans, fontSize: 13, color: C.text,
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {t.description}
-              {t.installment && (
-                <span style={{ fontFamily: fontMono, fontSize: 10.5, color: C.textFaint, border: `1px solid ${C.hairline}`, borderRadius: 4, padding: "1px 5px" }}>
-                  {t.installment[0]}/{t.installment[1]}
-                </span>
-              )}
-            </div>
-            <span style={{ color: C.textMuted, fontSize: 12.5 }}>{t.categoryLabel}</span>
-            <span style={{ fontFamily: fontMono, fontSize: 12.5, color: C.textMuted }}>{fmtDate(t.dueDate)}</span>
-            <span style={{ fontSize: 12 }}>
-              {t.recurrence && <Pill>{t.recurrence === "fixa" ? "Fixa" : t.recurrence === "variavel" ? "Variável" : "Esporádica"}</Pill>}
-            </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 5, color: C.textMuted, fontSize: 12.5 }}>
-              {method && <Icon name={method.icon} size={13} />} {method?.label}
-            </span>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontFamily: fontMono, fontSize: 13.5, color: t.type === "entrada" ? C.positive : C.negative, fontVariantNumeric: "tabular-nums" }}>
-                {t.type === "entrada" ? "+" : "−"} {fmtBRL(t.amount)}
-              </div>
-              <div style={{ marginTop: 3 }}><StatusPill status={t.status} /></div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function TransactionModal({ onClose, onSave, defaultType, defaultDueDate }) {
-  const [type, setType] = useState(defaultType || "saida");
-  const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("");
-  const [catId, setCatId] = useState("mercado");
-  const [recurrence, setRecurrence] = useState("variavel");
-  const [method, setMethod] = useState("pix");
-  const [dueDate, setDueDate] = useState(defaultDueDate || todayISO());
-  const [status, setStatus] = useState("pago");
-
-  const cat = CAT_LOOKUP[catId];
-  const parent = CAT_LOOKUP[cat.parentId] || cat;
-
-  const submit = () => {
-    if (!description || !amount) return;
-    onSave({
-      type, description, amount: parseFloat(String(amount).replace(",", ".")),
-      date: status === "pago" ? dueDate : null, dueDate,
-      category: catId, categoryLabel: `${parent.label} > ${cat.label}`,
-      bucket: cat.bucket || parent.bucket || null, recurrence, paymentMethod: method, status,
+  container.querySelectorAll('[data-toggle-r]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const key = 'r-'+el.dataset.toggleR;
+      if(openMonths.has(key)) openMonths.delete(key); else openMonths.add(key);
+      renderReceitas();
     });
-  };
-
-  return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={e => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-          <div style={{ fontFamily: fontDisplay, fontSize: 20, color: C.text, fontStyle: "italic" }}>Novo lançamento</div>
-          <button onClick={onClose} style={iconBtn}><Icon name="X" size={18} color={C.textMuted} /></button>
-        </div>
-
-        <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-          {[["entrada", "Recebimento"], ["saida", "Despesa"]].map(([id, label]) => (
-            <button key={id} onClick={() => setType(id)} style={{
-              flex: 1, fontFamily: fontSans, fontSize: 12.5, fontWeight: 600, padding: "9px 0", borderRadius: 8,
-              border: `1px solid ${type === id ? C.brass : C.hairline}`, cursor: "pointer",
-              background: type === id ? C.brassDim : "transparent", color: type === id ? C.brass : C.textMuted,
-            }}>{label}</button>
-          ))}
-        </div>
-
-        <Field label="Descrição">
-          <input value={description} onChange={e => setDescription(e.target.value)} placeholder="Ex: Mercado da semana" style={inputStyle} />
-        </Field>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <Field label="Valor (R$)">
-            <input value={amount} onChange={e => setAmount(e.target.value)} placeholder="0,00" style={inputStyle} />
-          </Field>
-          <Field label="Vencimento">
-            <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={inputStyle} />
-          </Field>
-        </div>
-
-        {type === "saida" && (
-          <Field label="Categoria">
-            <select value={catId} onChange={e => setCatId(e.target.value)} style={inputStyle}>
-              {CATEGORY_TREE.map(c => (
-                <optgroup key={c.id} label={c.label}>
-                  {c.subs.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                </optgroup>
-              ))}
-            </select>
-          </Field>
-        )}
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          {type === "saida" && (
-            <Field label="Natureza do gasto">
-              <select value={recurrence} onChange={e => setRecurrence(e.target.value)} style={inputStyle}>
-                <option value="fixa">Fixa</option>
-                <option value="variavel">Variável</option>
-                <option value="esporadica">Esporádica</option>
-              </select>
-            </Field>
-          )}
-          <Field label="Meio de pagamento">
-            <select value={method} onChange={e => setMethod(e.target.value)} style={inputStyle}>
-              {PAY_METHODS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
-              <option value="transferencia">Transferência</option>
-            </select>
-          </Field>
-        </div>
-
-        <Field label="Status">
-          <div style={{ display: "flex", gap: 6 }}>
-            {["pago", "pendente", "atrasado"].map(s => (
-              <button key={s} onClick={() => setStatus(s)} style={{
-                flex: 1, fontFamily: fontSans, fontSize: 12, fontWeight: 600, padding: "8px 0", borderRadius: 7,
-                border: `1px solid ${status === s ? C.brass : C.hairline}`, cursor: "pointer",
-                background: status === s ? C.brassDim : "transparent", color: status === s ? C.brass : C.textMuted,
-                textTransform: "capitalize",
-              }}>{s}</button>
-            ))}
-          </div>
-        </Field>
-
-        <button onClick={submit} style={{ ...btnPrimary, width: "100%", justifyContent: "center", marginTop: 6 }}>
-          Salvar lançamento
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Field({ label, children }) {
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ fontFamily: fontSans, fontSize: 11.5, color: C.textFaint, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.03em" }}>{label}</div>
-      {children}
-    </div>
-  );
-}
-
-const inputStyle = {
-  width: "100%", background: C.bg, border: `1px solid ${C.hairline}`, borderRadius: 8,
-  padding: "9px 11px", color: C.text, fontFamily: fontSans, fontSize: 13, outline: "none",
-  boxSizing: "border-box",
-};
-const overlayStyle = {
-  position: "fixed", inset: 0, background: "rgba(8,12,16,0.7)", backdropFilter: "blur(2px)",
-  display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 16,
-};
-const modalStyle = {
-  background: C.surface, border: `1px solid ${C.hairline}`, borderRadius: 14,
-  padding: 22, width: 420, maxWidth: "100%", maxHeight: "88vh", overflowY: "auto",
-};
-const iconBtn = { background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex" };
-const btnPrimary = {
-  display: "inline-flex", alignItems: "center", gap: 6, fontFamily: fontSans, fontSize: 13, fontWeight: 700,
-  background: C.brass, color: "#1a1509", border: "none", borderRadius: 9, padding: "10px 16px", cursor: "pointer",
-};
-
-/* ============================================================
-   DESPESAS POR MÊS
-   ============================================================ */
-function MonthlyExpenses({ transactions, addTransaction }) {
-  const [expandedMonth, setExpandedMonth] = useState(null);
-  const [addForMonth, setAddForMonth] = useState(null);
-  const currentMonthKey = todayISO().slice(0, 7);
-
-  const months = useMemo(() => {
-    const map = {};
-    transactions.filter(t => t.type === "saida").forEach(t => {
-      const ref = t.date || t.dueDate;
-      if (!ref) return;
-      const key = ref.slice(0, 7);
-      if (!map[key]) map[key] = { key, items: [], total: 0, pago: 0, pendente: 0 };
-      map[key].items.push(t);
-      map[key].total += t.amount;
-      if (t.status === "pago") map[key].pago += t.amount;
-      else map[key].pendente += t.amount;
-    });
-    return Object.values(map).sort((a, b) => b.key.localeCompare(a.key));
-  }, [transactions]);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div>
-        <div style={{ fontFamily: fontSans, fontSize: 11, letterSpacing: "0.08em", color: C.textFaint, textTransform: "uppercase" }}>Histórico</div>
-        <h1 style={{ fontFamily: fontDisplay, fontSize: 30, color: C.text, margin: "2px 0 0", fontWeight: 600 }}>Despesas por mês</h1>
-      </div>
-
-      {months.length === 0 && (
-        <div style={{ background: C.surface, border: `1px solid ${C.hairline}`, borderRadius: 12, padding: 30, textAlign: "center", color: C.textFaint, fontFamily: fontSans, fontSize: 13 }}>
-          Nenhuma despesa registrada ainda.
-        </div>
-      )}
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {months.map(month => {
-          const isOpen = expandedMonth === month.key;
-          const sortedItems = [...month.items].sort((a, b) => (b.date || b.dueDate || "").localeCompare(a.date || a.dueDate || ""));
-          return (
-            <div key={month.key} style={{ background: C.surface, border: `1px solid ${C.hairline}`, borderRadius: 14, overflow: "hidden" }}>
-              <div
-                onClick={() => setExpandedMonth(isOpen ? null : month.key)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 14, padding: "16px 20px", cursor: "pointer",
-                  flexWrap: "wrap",
-                }}
-              >
-                {isOpen ? <Icon name="ChevronDown" size={16} color={C.textMuted} /> : <Icon name="ChevronRight" size={16} color={C.textMuted} />}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 170 }}>
-                  <Icon name="Calendar" size={16} color={C.brass} />
-                  <div style={{ fontFamily: fontDisplay, fontSize: 17, fontStyle: "italic", color: C.text, textTransform: "capitalize" }}>
-                    {monthLabel(month.key)}
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", gap: 22, marginLeft: "auto", flexWrap: "wrap" }}>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontFamily: fontSans, fontSize: 10.5, color: C.textFaint, textTransform: "uppercase" }}>Total</div>
-                    <div style={{ fontFamily: fontMono, fontSize: 14.5, color: C.text }}>{fmtBRL(month.total)}</div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontFamily: fontSans, fontSize: 10.5, color: C.positive, textTransform: "uppercase" }}>Pago</div>
-                    <div style={{ fontFamily: fontMono, fontSize: 14.5, color: C.positive }}>{fmtBRL(month.pago)}</div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontFamily: fontSans, fontSize: 10.5, color: C.amber, textTransform: "uppercase" }}>Pendente</div>
-                    <div style={{ fontFamily: fontMono, fontSize: 14.5, color: C.amber }}>{fmtBRL(month.pendente)}</div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={(e) => { e.stopPropagation(); setAddForMonth(month.key); if (expandedMonth !== month.key) setExpandedMonth(month.key); }}
-                  style={{ ...btnPrimary, background: C.surfaceRaised2, color: C.text, border: `1px solid ${C.hairline}` }}
-                >
-                  <Icon name="Plus" size={14} /> Despesa
-                </button>
-              </div>
-
-              {isOpen && (
-                <div style={{ borderTop: `1px solid ${C.hairline}` }}>
-                  <TransactionTable list={sortedItems} />
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {addForMonth && (
-        <TransactionModal
-          defaultType="saida"
-          defaultDueDate={addForMonth === currentMonthKey ? todayISO() : `${addForMonth}-01`}
-          onClose={() => setAddForMonth(null)}
-          onSave={(tx) => { addTransaction(tx); setAddForMonth(null); }}
-        />
-      )}
-    </div>
-  );
-}
-
-/* ============================================================
-   CARTÕES  (consolidador com parcelas)
-   ============================================================ */
-function Cards({ cards, transactions, addCardPurchase, addCard }) {
-  const [expanded, setExpanded] = useState(cards[0]?.id || null);
-  const [openPurchase, setOpenPurchase] = useState(null);
-  const [openNewCard, setOpenNewCard] = useState(false);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <div style={{ fontFamily: fontSans, fontSize: 11, letterSpacing: "0.08em", color: C.textFaint, textTransform: "uppercase" }}>Contas consolidadoras</div>
-          <h1 style={{ fontFamily: fontDisplay, fontSize: 30, color: C.text, margin: "2px 0 0", fontWeight: 600 }}>Cartões de crédito</h1>
-        </div>
-        <button onClick={() => setOpenNewCard(true)} style={btnPrimary}><Icon name="Plus" size={15} /> Novo cartão</button>
-      </div>
-
-      {cards.map(card => {
-        const purchases = transactions.filter(t => t.cardId === card.id);
-        const grouped = {};
-        purchases.forEach(p => {
-          const key = p.purchaseId || p.id;
-          if (!grouped[key]) grouped[key] = [];
-          grouped[key].push(p);
-        });
-        const used = purchases.reduce((s, t) => s + t.amount, 0);
-        const remaining = card.limit - used;
-        const isOpen = expanded === card.id;
-
-        return (
-          <div key={card.id} style={{ background: C.surface, border: `1px solid ${C.hairline}`, borderRadius: 14, overflow: "hidden" }}>
-            <div onClick={() => setExpanded(isOpen ? null : card.id)} style={{
-              display: "flex", alignItems: "center", gap: 16, padding: "18px 20px", cursor: "pointer",
-              background: `linear-gradient(120deg, ${card.color}22, transparent 60%)`, flexWrap: "wrap",
-            }}>
-              {isOpen ? <Icon name="ChevronDown" size={16} color={C.textMuted} /> : <Icon name="ChevronRight" size={16} color={C.textMuted} />}
-              <div style={{
-                width: 46, height: 30, borderRadius: 6, background: card.color,
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-              }}>
-                <Icon name="CreditCard" size={16} color="#fff" strokeWidth={2} />
-              </div>
-              <div style={{ flex: 1, minWidth: 140 }}>
-                <div style={{ fontFamily: fontSans, fontSize: 14.5, fontWeight: 700, color: C.text }}>{card.name}</div>
-                <div style={{ fontFamily: fontSans, fontSize: 11.5, color: C.textFaint }}>
-                  Fecha dia {card.closingDay} · vence dia {card.dueDay}
-                </div>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontFamily: fontMono, fontSize: 16, color: C.text }}>{fmtBRL(used)}</div>
-                <div style={{ fontFamily: fontSans, fontSize: 11, color: C.textFaint }}>de {fmtBRL(card.limit)}</div>
-              </div>
-              <div style={{ width: 90 }}>
-                <div style={{ height: 6, background: C.surfaceRaised2, borderRadius: 3, overflow: "hidden" }}>
-                  <div style={{ width: `${Math.min(100, (used / card.limit) * 100)}%`, height: "100%", background: card.color }} />
-                </div>
-                <div style={{ fontFamily: fontMono, fontSize: 10.5, color: C.textFaint, marginTop: 3, textAlign: "right" }}>{fmtBRL(remaining)} livre</div>
-              </div>
-              <button onClick={(e) => { e.stopPropagation(); setOpenPurchase(card.id); }} style={{ ...btnPrimary, background: C.surfaceRaised2, color: C.text, border: `1px solid ${C.hairline}` }}>
-                <Icon name="Plus" size={14} /> Compra
-              </button>
-            </div>
-
-            {isOpen && (
-              <div style={{ borderTop: `1px solid ${C.hairline}`, padding: "6px 20px 16px" }}>
-                {Object.keys(grouped).length === 0 && (
-                  <div style={{ padding: 20, textAlign: "center", color: C.textFaint, fontFamily: fontSans, fontSize: 13 }}>Nenhuma compra neste cartão ainda.</div>
-                )}
-                {Object.entries(grouped).map(([key, items]) => {
-                  const first = items[0];
-                  const isInstallment = items.length > 1 || first.installment;
-                  const paidCount = items.filter(i => i.status === "pago").length;
-                  return (
-                    <div key={key} style={{ position: "relative", paddingLeft: 22, marginTop: 10 }}>
-                      <div style={{ position: "absolute", left: 6, top: 0, bottom: 0, width: 1, background: C.hairline }} />
-                      <div style={{ position: "absolute", left: 6, top: 16, width: 14, height: 1, background: C.hairline }} />
-                      <div style={{ background: C.surfaceRaised, border: `1px solid ${C.hairlineSoft}`, borderRadius: 10, padding: "12px 14px" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <div style={{ fontFamily: fontSans, fontSize: 13, fontWeight: 600, color: C.text }}>
-                            {first.description.replace(/\s\(\d+\/\d+\)$/, "")}
-                          </div>
-                          <div style={{ fontFamily: fontMono, fontSize: 13.5, color: C.text }}>
-                            {fmtBRL(items.reduce((s, i) => s + i.amount, 0))}
-                          </div>
-                        </div>
-                        <div style={{ fontFamily: fontSans, fontSize: 11.5, color: C.textFaint, marginTop: 2 }}>{first.categoryLabel}</div>
-                        {isInstallment && first.installment && (
-                          <div style={{ marginTop: 8 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", fontFamily: fontMono, fontSize: 10.5, color: C.textFaint, marginBottom: 3 }}>
-                              <span>{paidCount}/{items.length} parcelas pagas</span>
-                              <span>{fmtBRL(first.amount)}/mês</span>
-                            </div>
-                            <div style={{ height: 4, background: C.surfaceRaised2, borderRadius: 2, overflow: "hidden" }}>
-                              <div style={{ width: `${(paidCount / items.length) * 100}%`, height: "100%", background: card.color }} />
-                            </div>
-                          </div>
-                        )}
-                        {!isInstallment && (
-                          <div style={{ marginTop: 6 }}><StatusPill status={first.status} /></div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })}
-
-      {cards.length === 0 && (
-        <div style={{ background: C.surface, border: `1px solid ${C.hairline}`, borderRadius: 12, padding: 30, textAlign: "center", color: C.textFaint, fontFamily: fontSans, fontSize: 13 }}>
-          Nenhum cartão cadastrado ainda.
-        </div>
-      )}
-
-      {openPurchase && (
-        <PurchaseModal cardId={openPurchase} onClose={() => setOpenPurchase(null)}
-          onSave={(p) => { addCardPurchase(openPurchase, p); setOpenPurchase(null); }} />
-      )}
-      {openNewCard && (
-        <NewCardModal onClose={() => setOpenNewCard(false)} onSave={(c) => { addCard(c); setOpenNewCard(false); }} />
-      )}
-    </div>
-  );
-}
-
-function PurchaseModal({ cardId, onClose, onSave }) {
-  const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("");
-  const [catId, setCatId] = useState("mercado");
-  const [installments, setInstallments] = useState(1);
-  const [date, setDate] = useState(todayISO());
-
-  const submit = () => {
-    if (!description || !amount) return;
-    onSave({ description, amount: parseFloat(String(amount).replace(",", ".")), category: catId, installments: parseInt(installments) || 1, date });
-  };
-
-  return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={e => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-          <div style={{ fontFamily: fontDisplay, fontSize: 20, color: C.text, fontStyle: "italic" }}>Nova compra no cartão</div>
-          <button onClick={onClose} style={iconBtn}><Icon name="X" size={18} color={C.textMuted} /></button>
-        </div>
-        <Field label="Descrição">
-          <input value={description} onChange={e => setDescription(e.target.value)} placeholder="Ex: Notebook" style={inputStyle} />
-        </Field>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <Field label="Valor total (R$)">
-            <input value={amount} onChange={e => setAmount(e.target.value)} placeholder="0,00" style={inputStyle} />
-          </Field>
-          <Field label="Data da compra">
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
-          </Field>
-        </div>
-        <Field label="Categoria">
-          <select value={catId} onChange={e => setCatId(e.target.value)} style={inputStyle}>
-            {CATEGORY_TREE.map(c => (
-              <optgroup key={c.id} label={c.label}>
-                {c.subs.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-              </optgroup>
-            ))}
-          </select>
-        </Field>
-        <Field label="Parcelas">
-          <select value={installments} onChange={e => setInstallments(e.target.value)} style={inputStyle}>
-            {[1, 2, 3, 4, 5, 6, 8, 10, 12].map(n => <option key={n} value={n}>{n}x {n > 1 ? `de ${amount ? fmtBRL(parseFloat(String(amount).replace(",", ".")) / n) : "—"}` : "à vista"}</option>)}
-          </select>
-        </Field>
-        <button onClick={submit} style={{ ...btnPrimary, width: "100%", justifyContent: "center", marginTop: 6 }}>
-          Lançar compra e projetar parcelas
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function NewCardModal({ onClose, onSave }) {
-  const [name, setName] = useState("");
-  const [limit, setLimit] = useState("");
-  const [closingDay, setClosingDay] = useState(10);
-  const [dueDay, setDueDay] = useState(17);
-  const palette = ["#8A5CF6", "#FF7A1A", "#5FA778", "#C1594A", "#4A9FD6", "#C6A15B"];
-  const [color, setColor] = useState(palette[0]);
-
-  const submit = () => {
-    if (!name || !limit) return;
-    onSave({ name, limit: parseFloat(String(limit).replace(",", ".")), closingDay: parseInt(closingDay), dueDay: parseInt(dueDay), color });
-  };
-
-  return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={e => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-          <div style={{ fontFamily: fontDisplay, fontSize: 20, color: C.text, fontStyle: "italic" }}>Novo cartão</div>
-          <button onClick={onClose} style={iconBtn}><Icon name="X" size={18} color={C.textMuted} /></button>
-        </div>
-        <Field label="Nome do cartão">
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Nubank" style={inputStyle} />
-        </Field>
-        <Field label="Limite (R$)">
-          <input value={limit} onChange={e => setLimit(e.target.value)} placeholder="0,00" style={inputStyle} />
-        </Field>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <Field label="Dia de fechamento">
-            <input type="number" min={1} max={31} value={closingDay} onChange={e => setClosingDay(e.target.value)} style={inputStyle} />
-          </Field>
-          <Field label="Dia de vencimento">
-            <input type="number" min={1} max={31} value={dueDay} onChange={e => setDueDay(e.target.value)} style={inputStyle} />
-          </Field>
-        </div>
-        <Field label="Cor">
-          <div style={{ display: "flex", gap: 8 }}>
-            {palette.map(c => (
-              <button key={c} onClick={() => setColor(c)} style={{
-                width: 28, height: 28, borderRadius: 7, background: c, border: color === c ? `2px solid ${C.text}` : "2px solid transparent", cursor: "pointer",
-              }} />
-            ))}
-          </div>
-        </Field>
-        <button onClick={submit} style={{ ...btnPrimary, width: "100%", justifyContent: "center", marginTop: 6 }}>Adicionar cartão</button>
-      </div>
-    </div>
-  );
-}
-
-/* ============================================================
-   MATRIZ 50/30/20
-   ============================================================ */
-function Matrix({ transactions }) {
-  const curMonthKey = todayISO().slice(0, 7);
-  const monthTx = transactions.filter(t => t.type === "saida" && (t.date || t.dueDate || "").startsWith(curMonthKey));
-  const income = transactions.filter(t => t.type === "entrada" && (t.date || "").startsWith(curMonthKey)).reduce((s, t) => s + t.amount, 0);
-
-  const buckets = { essenciais: 0, lazer: 0, investimentos: 0 };
-  monthTx.forEach(t => { if (t.bucket) buckets[t.bucket] += t.amount; });
-
-  const targets = { essenciais: income * 0.5, lazer: income * 0.3, investimentos: income * 0.2 };
-  const labels = { essenciais: "Essenciais", lazer: "Lazer", investimentos: "Investimentos" };
-  const targetPct = { essenciais: 50, lazer: 30, investimentos: 20 };
-  const colors = { essenciais: C.brass, lazer: C.amber, investimentos: C.positive };
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      <div>
-        <div style={{ fontFamily: fontSans, fontSize: 11, letterSpacing: "0.08em", color: C.textFaint, textTransform: "uppercase" }}>Framework 50/30/20</div>
-        <h1 style={{ fontFamily: fontDisplay, fontSize: 30, color: C.text, margin: "2px 0 0", fontWeight: 600 }}>Matriz de gastos</h1>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px,1fr))", gap: 14 }}>
-        {Object.keys(buckets).map(key => {
-          const actualPct = income ? (buckets[key] / income) * 100 : 0;
-          const over = actualPct > targetPct[key];
-          return (
-            <div key={key} style={{ background: C.surface, border: `1px solid ${C.hairline}`, borderRadius: 14, padding: "20px 22px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                <div style={{ fontFamily: fontDisplay, fontSize: 17, fontStyle: "italic", color: C.text }}>{labels[key]}</div>
-                <div style={{ fontFamily: fontSans, fontSize: 11.5, color: C.textFaint }}>meta {targetPct[key]}%</div>
-              </div>
-              <div style={{ fontFamily: fontMono, fontSize: 28, color: colors[key], marginTop: 10 }}>{actualPct.toFixed(1)}%</div>
-              <div style={{ fontFamily: fontSans, fontSize: 12.5, color: C.textMuted, marginTop: 2 }}>{fmtBRL(buckets[key])} de {fmtBRL(targets[key])}</div>
-              <div style={{ height: 8, background: C.surfaceRaised2, borderRadius: 4, overflow: "hidden", marginTop: 12, position: "relative" }}>
-                <div style={{ width: `${Math.min(100, actualPct)}%`, height: "100%", background: colors[key] }} />
-                <div style={{ position: "absolute", left: `${targetPct[key]}%`, top: -3, width: 2, height: 14, background: C.text, opacity: 0.6 }} />
-              </div>
-              <div style={{ marginTop: 10, fontFamily: fontSans, fontSize: 12, color: over ? C.negative : C.positive, fontWeight: 600 }}>
-                {over ? `${(actualPct - targetPct[key]).toFixed(1)} p.p. acima da meta` : `${(targetPct[key] - actualPct).toFixed(1)} p.p. dentro da meta`}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div style={{ background: C.surface, border: `1px solid ${C.hairline}`, borderRadius: 14, padding: "20px 22px" }}>
-        <SectionTitle>Composição do mês</SectionTitle>
-        <div style={{ display: "flex", height: 34, borderRadius: 8, overflow: "hidden", marginTop: 14, border: `1px solid ${C.hairline}` }}>
-          {Object.keys(buckets).map(key => {
-            const w = income ? (buckets[key] / income) * 100 : 0;
-            return <div key={key} style={{ width: `${w}%`, background: colors[key] }} title={labels[key]} />;
-          })}
-        </div>
-        <div style={{ display: "flex", gap: 18, marginTop: 12, flexWrap: "wrap" }}>
-          {Object.keys(buckets).map(key => (
-            <div key={key} style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: fontSans, fontSize: 12.5, color: C.textMuted }}>
-              <span style={{ width: 9, height: 9, borderRadius: 2, background: colors[key] }} /> {labels[key]} · {fmtBRL(buckets[key])}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ============================================================
-   TELAS DE ESTADO (config / carregando)
-   ============================================================ */
-function SetupScreen() {
-  return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.bg, color: C.text, fontFamily: fontSans, padding: 20 }}>
-      <div style={{ maxWidth: 560, background: C.surface, border: `1px solid ${C.hairline}`, borderRadius: 14, padding: 28 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-          <Icon name="AlertOctagon" size={22} color={C.amber} />
-          <div style={{ fontFamily: fontDisplay, fontSize: 20, fontStyle: "italic" }}>Configuração do Firebase pendente</div>
-        </div>
-        <p style={{ fontSize: 13.5, lineHeight: 1.6, color: C.textMuted }}>
-          Este app usa o <strong>Firebase (plano gratuito Spark)</strong> para guardar seus dados.
-          Abra o arquivo <code style={{ background: C.surfaceRaised2, padding: "1px 6px", borderRadius: 4 }}>index.html</code> e
-          preencha o objeto <code style={{ background: C.surfaceRaised2, padding: "1px 6px", borderRadius: 4 }}>window.__FIREBASE_CONFIG__</code> com
-          as credenciais do seu projeto Firebase (Configurações do projeto → Seus apps → Web).
-        </p>
-        <ol style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.8, paddingLeft: 20 }}>
-          <li>Crie um projeto gratuito em console.firebase.google.com</li>
-          <li>Ative Authentication → método Anônimo</li>
-          <li>Ative Firestore Database</li>
-          <li>Copie a config do app Web para este arquivo</li>
-        </ol>
-      </div>
-    </div>
-  );
-}
-
-function LoadingScreen({ label }) {
-  return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.bg, color: C.textMuted, fontFamily: fontSans, fontSize: 13.5 }}>
-      {label || "Carregando..."}
-    </div>
-  );
-}
-
-/* ============================================================
-   APP SHELL
-   ============================================================ */
-function App() {
-  const [uid, setUid] = useState(null);
-  const [authError, setAuthError] = useState(null);
-  const [transactions, setTransactions] = useState([]);
-  const [cards, setCards] = useState([]);
-  const [loadingData, setLoadingData] = useState(true);
-  const [tab, setTabState] = useState("dashboard");
-  const [period, setPeriod] = useState("mes");
-
-  useEffect(() => {
-    if (!window.__FIREBASE_CONFIGURED__) return;
-    if (typeof firebase === "undefined" || !firebase.auth) {
-      setAuthError("O SDK do Firebase não carregou (verifique bloqueadores de anúncio/firewall e recarregue a página).");
-      return;
-    }
-    let unsub = () => {};
-    try {
-      const auth = firebase.auth();
-      unsub = auth.onAuthStateChanged(user => {
-        if (user) {
-          setUid(user.uid);
-        } else {
-          auth.signInAnonymously().catch(err => {
-            console.error(err);
-            setAuthError(err.code ? `${err.code}: ${err.message}` : err.message);
-          });
-        }
-      });
-    } catch (err) {
-      console.error(err);
-      setAuthError(String(err && err.message || err));
-    }
-    return () => unsub();
-  }, []);
-
-  useEffect(() => {
-    if (!uid) return;
-    const db = firebase.firestore();
-    const userRef = db.collection("users").doc(uid);
-    const txRef = userRef.collection("transactions");
-    const cardsRef = userRef.collection("cards");
-    const metaRef = userRef.collection("meta").doc("init");
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const metaSnap = await metaRef.get();
-        if (!metaSnap.exists && !cancelled) {
-          const batch = db.batch();
-          seedTransactions().forEach(t => batch.set(txRef.doc(), t));
-          initialCards.forEach(c => batch.set(cardsRef.doc(), c));
-          batch.set(metaRef, { initialized: true, at: Date.now() });
-          await batch.commit();
-        }
-      } catch (e) {
-        console.error("Erro ao semear dados iniciais:", e);
+  });
+  container.querySelectorAll('[data-edit-receita]').forEach(el=>{
+    el.addEventListener('click',(e)=>{ e.stopPropagation(); openReceitaModal(el.dataset.editReceita); });
+  });
+  container.querySelectorAll('[data-del-receita]').forEach(el=>{
+    el.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      if(confirm('Excluir esta receita?')){
+        await deleteDoc(doc(db,'receitas', el.dataset.delReceita));
+        toast('Receita excluída.');
       }
-    })();
+    });
+  });
+}
 
-    const unsubTx = txRef.onSnapshot(snap => {
-      setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setLoadingData(false);
-    }, err => { console.error(err); setLoadingData(false); });
-
-    const unsubCards = cardsRef.onSnapshot(snap => {
-      setCards(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, err => console.error(err));
-
-    return () => { cancelled = true; unsubTx(); unsubCards(); };
-  }, [uid]);
-
-  const addTransaction = async (tx) => {
-    if (!uid) return;
-    const clean = {};
-    Object.keys(tx).forEach(k => { clean[k] = tx[k] === undefined ? null : tx[k]; });
-    await firebase.firestore().collection("users").doc(uid).collection("transactions").add(clean);
-  };
-
-  const addCardPurchase = async (cardId, p) => {
-    if (!uid) return;
-    const db = firebase.firestore();
-    const txRef = db.collection("users").doc(uid).collection("transactions");
-    const purchaseId = p.installments > 1 ? txRef.doc().id : null;
-    const per = p.amount / p.installments;
-    const cat = CAT_LOOKUP[p.category];
-    const parent = CAT_LOOKUP[cat.parentId] || cat;
-    const batch = db.batch();
-    for (let i = 0; i < p.installments; i++) {
-      batch.set(txRef.doc(), {
-        type: "saida",
-        description: p.installments > 1 ? `${p.description} (${i + 1}/${p.installments})` : p.description,
-        amount: per,
-        date: i === 0 ? p.date : null,
-        dueDate: addMonths(p.date, i),
-        category: p.category,
-        categoryLabel: `${parent.label} > ${cat.label}`,
-        bucket: cat.bucket || parent.bucket || null,
-        recurrence: "esporadica",
-        paymentMethod: "credito",
-        cardId,
-        purchaseId: p.installments > 1 ? purchaseId : null,
-        installment: p.installments > 1 ? [i + 1, p.installments] : null,
-        status: i === 0 ? "pago" : "pendente",
-      });
-    }
-    await batch.commit();
-  };
-
-  const addCard = async (c) => {
-    if (!uid) return;
-    await firebase.firestore().collection("users").doc(uid).collection("cards").add(c);
-  };
-
-  const nav = [
-    { id: "dashboard", label: "Dashboard", icon: "LayoutGrid" },
-    { id: "lancamentos", label: "Lançamentos", icon: "Wallet" },
-    { id: "meses", label: "Despesas por Mês", icon: "Calendar" },
-    { id: "cartoes", label: "Cartões", icon: "CreditCard" },
-    { id: "matriz", label: "Matriz 50/30/20", icon: "PieChart" },
-  ];
-
-  if (!window.__FIREBASE_CONFIGURED__) return <SetupScreen />;
-  if (authError) return <LoadingScreen label={`Erro de autenticação: ${authError}`} />;
-  if (!uid || loadingData) return <LoadingScreen label="Conectando ao Firebase..." />;
-
-  return (
-    <div style={{ fontFamily: fontSans, background: C.bg, minHeight: "100vh", color: C.text, display: "flex" }}>
-      <div style={{
-        width: 220, flexShrink: 0, background: C.surface, borderRight: `1px solid ${C.hairline}`,
-        padding: "24px 14px", display: "flex", flexDirection: "column", gap: 4,
-      }}>
-        <div style={{ padding: "0 10px 22px" }}>
-          <div style={{ fontFamily: fontDisplay, fontSize: 19, fontWeight: 600, color: C.text, lineHeight: 1.15 }}>
-            Fluxo<span style={{ color: C.brass, fontStyle: "italic" }}>&amp;</span>Caixa
-          </div>
-          <div style={{ fontFamily: fontSans, fontSize: 10.5, color: C.textFaint, letterSpacing: "0.05em", marginTop: 2 }}>GESTÃO FINANCEIRA PESSOAL</div>
-        </div>
-        {nav.map(item => {
-          const active = tab === item.id;
-          return (
-            <button key={item.id} onClick={() => setTabState(item.id)} style={{
-              display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 9,
-              border: "none", cursor: "pointer", textAlign: "left",
-              background: active ? C.surfaceRaised2 : "transparent",
-              color: active ? C.brass : C.textMuted,
-              fontFamily: fontSans, fontSize: 13.5, fontWeight: active ? 600 : 500,
-            }}>
-              <Icon name={item.icon} size={16} /> {item.label}
-            </button>
-          );
-        })}
-
-        <div style={{ marginTop: "auto", padding: "14px 12px", borderTop: `1px solid ${C.hairline}` }}>
-          <div style={{ fontFamily: fontSans, fontSize: 11, color: C.textFaint }}>Conectado ao Firebase</div>
-          <div style={{ fontFamily: fontMono, fontSize: 10, color: C.textFaint, marginTop: 2, wordBreak: "break-all" }}>uid: {uid.slice(0, 12)}…</div>
-        </div>
+/* ---------- CONTAS ---------- */
+function renderContas(){
+  const container = document.getElementById('contasContainer');
+  container.innerHTML = state.contas.map(c=>{
+    const saldo = saldoConta(c.id);
+    return `
+    <div class="account-card">
+      <div class="top">
+        <div class="icon-badge" style="background:${(c.cor||'#2fe0a8')+'22'}">${c.icone||'🏦'}</div>
+        <div class="name">${c.nome}</div>
       </div>
+      <div class="saldo mono" style="color:${saldo>=0?'var(--emerald)':'var(--rose)'}">${fmt(saldo)}</div>
+      <div style="color:var(--text-muted); font-size:11.5px; margin-top:4px;">Saldo inicial: ${fmt(c.saldoInicial||0)}</div>
+      <div class="foot">
+        <button class="btn btn-ghost btn-sm" data-edit-conta="${c.id}">${svgIcon('edit')} Editar</button>
+        <button class="btn btn-danger-outline btn-sm" data-del-conta="${c.id}">${svgIcon('trash')}</button>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty-msg">Nenhuma conta cadastrada ainda.</div>';
 
-      <div style={{ flex: 1, padding: "28px 32px", maxWidth: 1180 }}>
-        {tab === "dashboard" && <Dashboard transactions={transactions} cards={cards} period={period} setPeriod={setPeriod} />}
-        {tab === "lancamentos" && <Transactions transactions={transactions} addTransaction={addTransaction} />}
-        {tab === "meses" && <MonthlyExpenses transactions={transactions} addTransaction={addTransaction} />}
-        {tab === "cartoes" && <Cards cards={cards} transactions={transactions} addCardPurchase={addCardPurchase} addCard={addCard} />}
-        {tab === "matriz" && <Matrix transactions={transactions} />}
+  container.querySelectorAll('[data-edit-conta]').forEach(el=>{
+    el.addEventListener('click', ()=>openContaModal(el.dataset.editConta));
+  });
+  container.querySelectorAll('[data-del-conta]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      if(confirm('Excluir esta conta? Despesas e receitas vinculadas a ela não serão excluídas.')){
+        await deleteDoc(doc(db,'contas', el.dataset.delConta));
+        toast('Conta excluída.');
+      }
+    });
+  });
+}
+
+/* ---------- CONFIG: categorias ---------- */
+function renderConfigCategorias(){
+  const container = document.getElementById('categoriasList');
+  container.innerHTML = state.categorias.map(c=>`
+    <div class="cfg-item">
+      <div class="cfg-item-head">
+        <div class="icon-badge" style="background:${(c.cor||'#666')+'22'}">${c.icone||'📦'}</div>
+        <div class="name">${c.nome}</div>
+        <button class="btn btn-icon" data-edit-cat="${c.id}">${svgIcon('edit')}</button>
+        <button class="btn btn-icon" data-del-cat="${c.id}" style="color:var(--rose);">${svgIcon('trash')}</button>
+      </div>
+      <div class="chip-list">
+        ${(c.subcategorias||[]).map(s=>`<span class="chip">${s} <button data-del-sub="${c.id}|${s}">${svgIcon('x')}</button></span>`).join('')}
+      </div>
+      <div class="add-inline">
+        <input type="text" placeholder="Nova subcategoria" data-sub-input="${c.id}">
+        <button class="btn btn-ghost btn-sm" data-add-sub="${c.id}">Adicionar</button>
       </div>
     </div>
-  );
+  `).join('') || '<div class="empty-msg">Nenhuma categoria cadastrada.</div>';
+
+  container.querySelectorAll('[data-edit-cat]').forEach(el=>el.addEventListener('click',()=>openCategoriaModal(el.dataset.editCat)));
+  container.querySelectorAll('[data-del-cat]').forEach(el=>el.addEventListener('click', async ()=>{
+    if(confirm('Excluir esta categoria?')){ await deleteDoc(doc(db,'categorias', el.dataset.delCat)); }
+  }));
+  container.querySelectorAll('[data-add-sub]').forEach(el=>el.addEventListener('click', async ()=>{
+    const catId = el.dataset.addSub;
+    const input = container.querySelector(`[data-sub-input="${catId}"]`);
+    const val = input.value.trim();
+    if(!val) return;
+    const cat = byId(state.categorias, catId);
+    const novasSubs = [...(cat.subcategorias||[]), val];
+    await updateDoc(doc(db,'categorias', catId), { subcategorias: novasSubs });
+    input.value='';
+  }));
+  container.querySelectorAll('[data-del-sub]').forEach(el=>el.addEventListener('click', async ()=>{
+    const [catId, sub] = el.dataset.delSub.split('|');
+    const cat = byId(state.categorias, catId);
+    const novasSubs = (cat.subcategorias||[]).filter(s=>s!==sub);
+    await updateDoc(doc(db,'categorias', catId), { subcategorias: novasSubs });
+  }));
 }
 
-class ErrorBoundary extends React.Component {
-  constructor(props) { super(props); this.state = { error: null }; }
-  static getDerivedStateFromError(error) { return { error }; }
-  componentDidCatch(error, info) { console.error("Erro no app:", error, info); }
-  render() {
-    if (this.state.error) {
-      return <LoadingScreen label={`Erro ao renderizar o app: ${this.state.error.message || this.state.error}`} />;
+function renderConfigTipos(){
+  const container = document.getElementById('tiposList');
+  container.innerHTML = state.tipos.map(t=>`
+    <div class="cfg-item"><div class="cfg-item-head">
+      <div class="name">${t.nome}</div>
+      <button class="btn btn-icon" data-edit-tipo="${t.id}">${svgIcon('edit')}</button>
+      <button class="btn btn-icon" data-del-tipo="${t.id}" style="color:var(--rose);">${svgIcon('trash')}</button>
+    </div></div>`).join('') || '<div class="empty-msg">Nenhum tipo cadastrado.</div>';
+  container.querySelectorAll('[data-edit-tipo]').forEach(el=>el.addEventListener('click',()=>openSimpleModal('tipos', el.dataset.editTipo, 'Tipo')));
+  container.querySelectorAll('[data-del-tipo]').forEach(el=>el.addEventListener('click', async ()=>{
+    if(confirm('Excluir este tipo?')) await deleteDoc(doc(db,'tipos', el.dataset.delTipo));
+  }));
+}
+
+function renderConfigClasses(){
+  const container = document.getElementById('classesList');
+  const somaPct = state.classes.reduce((s,c)=>s+Number(c.metaPercentual||0),0);
+  container.innerHTML = `
+    ${somaPct!==100 && state.classes.length>0 ? `<div class="empty-msg" style="color:var(--amber); text-align:left; padding:0 0 12px;">⚠️ A soma das metas é ${somaPct}% (ideal: 100%).</div>`:''}
+    ${state.classes.map(c=>`
+    <div class="cfg-item"><div class="cfg-item-head">
+      <div class="icon-badge" style="background:${(c.cor||'#666')+'22'}"></div>
+      <div class="name">${c.nome} <span class="mono" style="color:var(--text-muted); font-weight:400;">— meta ${c.metaPercentual||0}%</span></div>
+      <button class="btn btn-icon" data-edit-classe="${c.id}">${svgIcon('edit')}</button>
+      <button class="btn btn-icon" data-del-classe="${c.id}" style="color:var(--rose);">${svgIcon('trash')}</button>
+    </div></div>`).join('')}` || '<div class="empty-msg">Nenhuma classe cadastrada.</div>';
+  container.querySelectorAll('[data-edit-classe]').forEach(el=>el.addEventListener('click',()=>openClasseModal(el.dataset.editClasse)));
+  container.querySelectorAll('[data-del-classe]').forEach(el=>el.addEventListener('click', async ()=>{
+    if(confirm('Excluir esta classe?')) await deleteDoc(doc(db,'classes', el.dataset.delClasse));
+  }));
+}
+
+function renderConfigFormas(){
+  const container = document.getElementById('formasList');
+  container.innerHTML = state.formas.map(f=>`
+    <div class="cfg-item"><div class="cfg-item-head">
+      <div class="name">${f.nome}</div>
+      <button class="btn btn-icon" data-edit-forma="${f.id}">${svgIcon('edit')}</button>
+      <button class="btn btn-icon" data-del-forma="${f.id}" style="color:var(--rose);">${svgIcon('trash')}</button>
+    </div></div>`).join('') || '<div class="empty-msg">Nenhuma forma de pagamento cadastrada.</div>';
+  container.querySelectorAll('[data-edit-forma]').forEach(el=>el.addEventListener('click',()=>openSimpleModal('formasPagamento', el.dataset.editForma, 'Forma de pagamento')));
+  container.querySelectorAll('[data-del-forma]').forEach(el=>el.addEventListener('click', async ()=>{
+    if(confirm('Excluir esta forma de pagamento?')) await deleteDoc(doc(db,'formasPagamento', el.dataset.delForma));
+  }));
+}
+
+/* ---------- MODAIS ---------- */
+const overlay = document.getElementById('modalOverlay');
+const modalBox = document.getElementById('modalBox');
+function closeModal(){ overlay.classList.remove('active'); modalBox.innerHTML=''; }
+overlay.addEventListener('click', e=>{ if(e.target===overlay) closeModal(); });
+function openModal(html){ modalBox.innerHTML = html; overlay.classList.add('active'); }
+
+function optionsHtml(arr, selectedId, labelKey='nome'){
+  return arr.map(x=>`<option value="${x.id}" ${x.id===selectedId?'selected':''}>${x[labelKey]}</option>`).join('');
+}
+function monthOptionsHtml(selected){
+  return getMonthsList().map(m=>`<option value="${m}" ${m===selected?'selected':''}>${monthLabel(m)}</option>`).join('');
+}
+
+function openDespesaModal(id, defaultMes){
+  const d = id ? byId(state.despesas, id) : null;
+  const mes = d ? d.mes : (defaultMes || todayKey());
+  const cat = d ? byId(state.categorias, d.categoriaId) : state.categorias[0];
+  openModal(`
+    <div class="modal-head"><h3>${d?'Editar despesa':'Nova despesa'}</h3>
+      <button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
+    <div class="form-grid">
+      <div class="field full"><label>Descrição</label><input id="fDesc" value="${d?d.descricao:''}" placeholder="Ex: Conta de luz"></div>
+      <div class="field"><label>Valor (R$)</label><input id="fValor" type="number" step="0.01" value="${d?d.valor:''}" placeholder="0,00"></div>
+      <div class="field"><label>Mês</label><select id="fMes">${monthOptionsHtml(mes)}</select></div>
+      <div class="field"><label>Categoria</label><select id="fCat">${optionsHtml(state.categorias, d?d.categoriaId:(cat?cat.id:null))}</select></div>
+      <div class="field"><label>Subcategoria</label><input id="fSub" list="subList" value="${d?(d.subcategoria||''):''}" placeholder="Selecione ou digite"><datalist id="subList"></datalist></div>
+      <div class="field"><label>Tipo</label><select id="fTipo">${optionsHtml(state.tipos, d?d.tipoId:null)}</select></div>
+      <div class="field"><label>Classe</label><select id="fClasse">${optionsHtml(state.classes, d?d.classeId:null)}</select></div>
+      <div class="field"><label>Conta de pagamento</label><select id="fConta">${optionsHtml(state.contas, d?d.contaId:null)}</select></div>
+      <div class="field"><label>Forma de pagamento</label><select id="fForma">${optionsHtml(state.formas, d?d.formaPagamentoId:null)}</select></div>
+      <div class="field"><label>Dia de vencimento</label><input id="fVenc" type="number" min="1" max="31" value="${d?(d.vencimento||''):''}" placeholder="Ex: 10"></div>
+      <div class="field" style="display:flex; align-items:flex-end;">
+        <div class="check-row"><input type="checkbox" id="fPago" ${d&&d.pago?'checked':''}><label style="margin:0;" for="fPago">Já foi pago</label></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      ${d?`<button class="btn btn-danger-outline" id="mDelete">Excluir</button>`:''}
+      <button class="btn btn-ghost" id="mCancel">Cancelar</button>
+      <button class="btn btn-primary" id="mSave">Salvar</button>
+    </div>
+  `);
+  function updateSubList(){
+    const catId = document.getElementById('fCat').value;
+    const c = byId(state.categorias, catId);
+    document.getElementById('subList').innerHTML = (c?.subcategorias||[]).map(s=>`<option value="${s}">`).join('');
+  }
+  updateSubList();
+  document.getElementById('fCat').addEventListener('change', updateSubList);
+  document.getElementById('mClose').addEventListener('click', closeModal);
+  document.getElementById('mCancel').addEventListener('click', closeModal);
+  if(d) document.getElementById('mDelete').addEventListener('click', async ()=>{
+    if(confirm('Excluir esta despesa?')){ await deleteDoc(doc(db,'despesas', id)); closeModal(); }
+  });
+  document.getElementById('mSave').addEventListener('click', async ()=>{
+    const payload = {
+      descricao: document.getElementById('fDesc').value.trim(),
+      valor: Number(document.getElementById('fValor').value)||0,
+      mes: document.getElementById('fMes').value,
+      categoriaId: document.getElementById('fCat').value || null,
+      subcategoria: document.getElementById('fSub').value.trim(),
+      tipoId: document.getElementById('fTipo').value || null,
+      classeId: document.getElementById('fClasse').value || null,
+      contaId: document.getElementById('fConta').value || null,
+      formaPagamentoId: document.getElementById('fForma').value || null,
+      vencimento: Number(document.getElementById('fVenc').value)||null,
+      pago: document.getElementById('fPago').checked,
+    };
+    if(!payload.descricao || !payload.valor){ toast('Preencha descrição e valor.'); return; }
+    if(d) await updateDoc(doc(db,'despesas', id), payload);
+    else await addDoc(collection(db,'despesas'), payload);
+    closeModal(); toast('Despesa salva.');
+  });
+}
+
+function openReceitaModal(id){
+  const r = id ? byId(state.receitas, id) : null;
+  openModal(`
+    <div class="modal-head"><h3>${r?'Editar receita':'Nova receita'}</h3>
+      <button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
+    <div class="form-grid">
+      <div class="field full"><label>Descrição</label><input id="fDesc" value="${r?r.descricao:''}" placeholder="Ex: Salário"></div>
+      <div class="field"><label>Valor (R$)</label><input id="fValor" type="number" step="0.01" value="${r?r.valor:''}"></div>
+      <div class="field"><label>Mês</label><select id="fMes">${monthOptionsHtml(r?r.mes:todayKey())}</select></div>
+      <div class="field full"><label>Conta de destino</label><select id="fConta">${optionsHtml(state.contas, r?r.contaId:null)}</select></div>
+    </div>
+    <div class="modal-actions">
+      ${r?`<button class="btn btn-danger-outline" id="mDelete">Excluir</button>`:''}
+      <button class="btn btn-ghost" id="mCancel">Cancelar</button>
+      <button class="btn btn-primary" id="mSave">Salvar</button>
+    </div>
+  `);
+  document.getElementById('mClose').addEventListener('click', closeModal);
+  document.getElementById('mCancel').addEventListener('click', closeModal);
+  if(r) document.getElementById('mDelete').addEventListener('click', async ()=>{
+    if(confirm('Excluir esta receita?')){ await deleteDoc(doc(db,'receitas', id)); closeModal(); }
+  });
+  document.getElementById('mSave').addEventListener('click', async ()=>{
+    const payload = {
+      descricao: document.getElementById('fDesc').value.trim(),
+      valor: Number(document.getElementById('fValor').value)||0,
+      mes: document.getElementById('fMes').value,
+      contaId: document.getElementById('fConta').value || null,
+    };
+    if(!payload.descricao || !payload.valor){ toast('Preencha descrição e valor.'); return; }
+    if(r) await updateDoc(doc(db,'receitas', id), payload);
+    else await addDoc(collection(db,'receitas'), payload);
+    closeModal(); toast('Receita salva.');
+  });
+}
+
+function openContaModal(id){
+  const c = id ? byId(state.contas, id) : null;
+  const emojis = ['🏦','💳','💰','👛','🐷','🪙','💵','🏧'];
+  openModal(`
+    <div class="modal-head"><h3>${c?'Editar conta':'Nova conta'}</h3>
+      <button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
+    <div class="form-grid">
+      <div class="field full"><label>Nome</label><input id="fNome" value="${c?c.nome:''}" placeholder="Ex: Nubank"></div>
+      <div class="field"><label>Ícone</label><select id="fIcone">${emojis.map(e=>`<option ${c&&c.icone===e?'selected':''}>${e}</option>`).join('')}</select></div>
+      <div class="field"><label>Cor</label><input id="fCor" type="color" value="${c?c.cor:'#2fe0a8'}"></div>
+      <div class="field full"><label>Saldo inicial (R$)</label><input id="fSaldo" type="number" step="0.01" value="${c?c.saldoInicial:0}"></div>
+    </div>
+    <div class="modal-actions">
+      ${c?`<button class="btn btn-danger-outline" id="mDelete">Excluir</button>`:''}
+      <button class="btn btn-ghost" id="mCancel">Cancelar</button>
+      <button class="btn btn-primary" id="mSave">Salvar</button>
+    </div>
+  `);
+  document.getElementById('mClose').addEventListener('click', closeModal);
+  document.getElementById('mCancel').addEventListener('click', closeModal);
+  if(c) document.getElementById('mDelete').addEventListener('click', async ()=>{
+    if(confirm('Excluir esta conta?')){ await deleteDoc(doc(db,'contas', id)); closeModal(); }
+  });
+  document.getElementById('mSave').addEventListener('click', async ()=>{
+    const payload = {
+      nome: document.getElementById('fNome').value.trim(),
+      icone: document.getElementById('fIcone').value,
+      cor: document.getElementById('fCor').value,
+      saldoInicial: Number(document.getElementById('fSaldo').value)||0,
+    };
+    if(!payload.nome){ toast('Informe o nome da conta.'); return; }
+    if(c) await updateDoc(doc(db,'contas', id), payload);
+    else await addDoc(collection(db,'contas'), payload);
+    closeModal(); toast('Conta salva.');
+  });
+}
+
+function openCategoriaModal(id){
+  const c = id ? byId(state.categorias, id) : null;
+  const emojis = ['🏠','🍽️','🚗','💊','🎮','📚','📦','👕','✈️','🐾','🎁','📱','💡','⚽','🎓'];
+  openModal(`
+    <div class="modal-head"><h3>${c?'Editar categoria':'Nova categoria'}</h3>
+      <button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
+    <div class="form-grid">
+      <div class="field full"><label>Nome</label><input id="fNome" value="${c?c.nome:''}" placeholder="Ex: Casa"></div>
+      <div class="field"><label>Ícone</label><select id="fIcone">${emojis.map(e=>`<option ${c&&c.icone===e?'selected':''}>${e}</option>`).join('')}</select></div>
+      <div class="field"><label>Cor</label><input id="fCor" type="color" value="${c?c.cor:'#5b9dff'}"></div>
+    </div>
+    <div class="modal-actions">
+      ${c?`<button class="btn btn-danger-outline" id="mDelete">Excluir</button>`:''}
+      <button class="btn btn-ghost" id="mCancel">Cancelar</button>
+      <button class="btn btn-primary" id="mSave">Salvar</button>
+    </div>
+  `);
+  document.getElementById('mClose').addEventListener('click', closeModal);
+  document.getElementById('mCancel').addEventListener('click', closeModal);
+  if(c) document.getElementById('mDelete').addEventListener('click', async ()=>{
+    if(confirm('Excluir esta categoria?')){ await deleteDoc(doc(db,'categorias', id)); closeModal(); }
+  });
+  document.getElementById('mSave').addEventListener('click', async ()=>{
+    const nome = document.getElementById('fNome').value.trim();
+    if(!nome){ toast('Informe o nome.'); return; }
+    const payload = { nome, icone: document.getElementById('fIcone').value, cor: document.getElementById('fCor').value };
+    if(c) await updateDoc(doc(db,'categorias', id), payload);
+    else await addDoc(collection(db,'categorias'), {...payload, subcategorias:[]});
+    closeModal(); toast('Categoria salva.');
+  });
+}
+
+function openClasseModal(id){
+  const c = id ? byId(state.classes, id) : null;
+  openModal(`
+    <div class="modal-head"><h3>${c?'Editar classe':'Nova classe'}</h3>
+      <button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
+    <div class="form-grid">
+      <div class="field full"><label>Nome</label><input id="fNome" value="${c?c.nome:''}" placeholder="Ex: Lazer"></div>
+      <div class="field"><label>Meta (% do salário)</label><input id="fMeta" type="number" min="0" max="100" value="${c?c.metaPercentual:''}" placeholder="Ex: 30"></div>
+      <div class="field"><label>Cor</label><input id="fCor" type="color" value="${c?c.cor:'#b98cff'}"></div>
+    </div>
+    <div class="modal-actions">
+      ${c?`<button class="btn btn-danger-outline" id="mDelete">Excluir</button>`:''}
+      <button class="btn btn-ghost" id="mCancel">Cancelar</button>
+      <button class="btn btn-primary" id="mSave">Salvar</button>
+    </div>
+  `);
+  document.getElementById('mClose').addEventListener('click', closeModal);
+  document.getElementById('mCancel').addEventListener('click', closeModal);
+  if(c) document.getElementById('mDelete').addEventListener('click', async ()=>{
+    if(confirm('Excluir esta classe?')){ await deleteDoc(doc(db,'classes', id)); closeModal(); }
+  });
+  document.getElementById('mSave').addEventListener('click', async ()=>{
+    const nome = document.getElementById('fNome').value.trim();
+    if(!nome){ toast('Informe o nome.'); return; }
+    const payload = { nome, metaPercentual:Number(document.getElementById('fMeta').value)||0, cor: document.getElementById('fCor').value };
+    if(c) await updateDoc(doc(db,'classes', id), payload);
+    else await addDoc(collection(db,'classes'), payload);
+    closeModal(); toast('Classe salva.');
+  });
+}
+
+function openSimpleModal(colName, id, label){
+  const arr = colName==='tipos'?state.tipos:state.formas;
+  const item = id ? byId(arr, id) : null;
+  openModal(`
+    <div class="modal-head"><h3>${item?'Editar':'Novo(a)'} ${label}</h3>
+      <button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
+    <div class="field full"><label>Nome</label><input id="fNome" value="${item?item.nome:''}" placeholder="${label}"></div>
+    <div class="modal-actions">
+      ${item?`<button class="btn btn-danger-outline" id="mDelete">Excluir</button>`:''}
+      <button class="btn btn-ghost" id="mCancel">Cancelar</button>
+      <button class="btn btn-primary" id="mSave">Salvar</button>
+    </div>
+  `);
+  document.getElementById('mClose').addEventListener('click', closeModal);
+  document.getElementById('mCancel').addEventListener('click', closeModal);
+  if(item) document.getElementById('mDelete').addEventListener('click', async ()=>{
+    if(confirm('Excluir?')){ await deleteDoc(doc(db,colName, id)); closeModal(); }
+  });
+  document.getElementById('mSave').addEventListener('click', async ()=>{
+    const nome = document.getElementById('fNome').value.trim();
+    if(!nome){ toast('Informe o nome.'); return; }
+    if(item) await updateDoc(doc(db,colName, id), {nome});
+    else await addDoc(collection(db,colName), {nome});
+    closeModal(); toast('Salvo.');
+  });
+}
+
+function openMesRetroModal(){
+  openModal(`
+    <div class="modal-head"><h3>Adicionar mês retroativo</h3>
+      <button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
+    <div class="field full"><label>Selecione o mês</label><input id="fMes" type="month" value="${todayKey()}"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="mCancel">Cancelar</button>
+      <button class="btn btn-primary" id="mSave">Adicionar</button>
+    </div>
+  `);
+  document.getElementById('mClose').addEventListener('click', closeModal);
+  document.getElementById('mCancel').addEventListener('click', closeModal);
+  document.getElementById('mSave').addEventListener('click', async ()=>{
+    const mes = document.getElementById('fMes').value;
+    if(!mes){ closeModal(); return; }
+    const atual = state.config.mesesRetroativos || [];
+    if(!atual.includes(mes)){
+      await setDoc(doc(db,'meta','geral'), { mesesRetroativos:[...atual, mes] }, {merge:true});
     }
-    return this.props.children;
-  }
+    openMonths.add(mes);
+    closeModal(); toast('Mês adicionado.');
+  });
 }
 
-try {
-  const rootEl = document.getElementById("root");
-  const root = ReactDOM.createRoot(rootEl);
-  root.render(<ErrorBoundary><App /></ErrorBoundary>);
-  rootEl.dataset.appMounted = "1";
-} catch (e) {
-  console.error("Falha ao montar o app:", e);
-  if (typeof showFatalError === "function") {
-    showFatalError("Falha ao montar o app", String(e && e.message || e));
-  }
-}
+/* ---------- eventos gerais / navegação ---------- */
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('section.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+btn.dataset.tab).classList.add('active');
+  });
+});
+document.querySelectorAll('.tab-nav-sm button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-nav-sm button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.cfg-view').forEach(v=>v.style.display='none');
+    document.getElementById('cfg-'+btn.dataset.cfg).style.display='block';
+  });
+});
+document.getElementById('btnAddMesRetro').addEventListener('click', openMesRetroModal);
+document.getElementById('btnNovaReceita').addEventListener('click', ()=>openReceitaModal(null));
+document.getElementById('btnNovaConta').addEventListener('click', ()=>openContaModal(null));
+document.getElementById('btnNovaCategoria').addEventListener('click', ()=>openCategoriaModal(null));
+document.getElementById('btnNovoTipo').addEventListener('click', ()=>openSimpleModal('tipos', null, 'Tipo'));
+document.getElementById('btnNovaClasse').addEventListener('click', ()=>openClasseModal(null));
+document.getElementById('btnNovaForma').addEventListener('click', ()=>openSimpleModal('formasPagamento', null, 'Forma de pagamento'));
+
+openMonths.add(todayKey());
 </script>
 </body>
 </html>

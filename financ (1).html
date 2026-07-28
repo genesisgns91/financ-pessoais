@@ -1,0 +1,2064 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Razão — Gestão Financeira Pessoal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#142032;
+    --ink-soft:#3a4a63;
+    --paper:#F5F2E8;
+    --paper-line:#E1DAC4;
+    --card:#FFFEF9;
+    --brass:#A97C36;
+    --brass-dark:#8A6528;
+    --sage:#3F6B57;
+    --sage-bg:#E7EFE9;
+    --rust:#9C4A3C;
+    --rust-bg:#F4E6E2;
+  }
+  *{box-sizing:border-box;}
+  body{
+    background-color:var(--paper);
+    background-image:
+      linear-gradient(var(--paper-line) 1px, transparent 1px);
+    background-size: 100% 2.25rem;
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+  }
+  .font-display{font-family:'Fraunces',serif;}
+  .font-mono{font-family:'IBM Plex Mono',monospace;}
+  .tabular{font-variant-numeric: tabular-nums;}
+ 
+  /* Ledger tab navigation (signature element) */
+  .ledger-tab{
+    position:relative;
+    font-family:'IBM Plex Mono',monospace;
+    letter-spacing:.04em;
+    transition: transform .15s ease, background-color .15s ease, color .15s ease;
+  }
+  .ledger-tab:hover{ transform: translateX(2px); }
+  .ledger-tab.active{
+    background:var(--card);
+    color:var(--ink);
+    box-shadow: inset 3px 0 0 var(--brass);
+  }
+  .ledger-tab:not(.active){ color:#8b8262; }
+ 
+  .paper-card{
+    background:var(--card);
+    border:1px solid var(--paper-line);
+    box-shadow: 0 1px 0 var(--paper-line), 0 8px 20px -12px rgba(20,32,50,.25);
+  }
+ 
+  .stamp{
+    font-family:'IBM Plex Mono',monospace;
+    letter-spacing:.08em;
+    border:1.5px solid currentColor;
+    border-radius:3px;
+    transform: rotate(-1.2deg);
+  }
+ 
+  input, select{
+    background:var(--card);
+    border:1px solid var(--paper-line);
+    color:var(--ink);
+  }
+  input:focus, select:focus{
+    outline:2px solid var(--brass);
+    outline-offset:1px;
+    border-color:var(--brass);
+  }
+  input::placeholder{ color:#a8a08a; }
+ 
+  .btn-primary{
+    background:var(--brass);
+    color:var(--card);
+    transition: background-color .15s ease, transform .1s ease;
+  }
+  .btn-primary:hover{ background:var(--brass-dark); }
+  .btn-primary:active{ transform: translateY(1px); }
+ 
+  .row-hover:hover{ background:#FBF9F2; }
+ 
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-thumb{ background:var(--paper-line); border-radius:6px; }
+ 
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; animation:none !important; }
+  }
+</style>
+</head>
+<body class="min-h-screen">
+ 
+<div class="flex flex-col md:flex-row min-h-screen">
+ 
+  <!-- Sidebar / Ledger tabs -->
+  <aside class="md:w-56 w-full border-b md:border-b-0 md:border-r" style="border-color:var(--paper-line); background:#EFEADA;">
+    <div class="px-5 pt-6 pb-5 hidden md:block">
+      <h1 class="font-display text-2xl font-semibold" style="color:var(--ink);">Razão</h1>
+      <p class="text-[11px] font-mono mt-1" style="color:#8b8262;">livro-caixa pessoal</p>
+    </div>
+    <nav id="nav-tabs" class="flex md:flex-col overflow-x-auto md:overflow-visible">
+      <!-- tabs injected by JS -->
+    </nav>
+  </aside>
+ 
+  <!-- Main content -->
+  <main class="flex-1 px-4 sm:px-8 py-6 md:py-8 max-w-6xl">
+    <div id="view-root"></div>
+  </main>
+</div>
+ 
+<script>
+/* =========================================================
+   ESTADO CENTRAL & PERSISTÊNCIA (localStorage)
+   ========================================================= */
+const STORAGE_KEY = 'razao_app_state_v1';
+ 
+const DEFAULT_CATEGORIES = [
+  { id: 'cat-casa', name: 'Casa', subcategories: [
+      { id: 'sub-energia', name: 'Energia/Água' },
+      { id: 'sub-internet', name: 'Internet' }
+    ]
+  },
+  { id: 'cat-carro', name: 'Carro', subcategories: [
+      { id: 'sub-gasolina', name: 'Gasolina' },
+      { id: 'sub-manutencao', name: 'Manutenção' }
+    ]
+  },
+  { id: 'cat-alimentacao', name: 'Alimentação', subcategories: [
+      { id: 'sub-mercado', name: 'Mercado' },
+      { id: 'sub-restaurante', name: 'Restaurante' }
+    ]
+  },
+  { id: 'cat-saude', name: 'Saúde', subcategories: [
+      { id: 'sub-farmacia', name: 'Farmácia' },
+      { id: 'sub-plano', name: 'Plano de Saúde' }
+    ]
+  },
+  { id: 'cat-lazer', name: 'Lazer', subcategories: [
+      { id: 'sub-streaming', name: 'Streaming' },
+      { id: 'sub-saidas', name: 'Saídas' }
+    ]
+  }
+];
+ 
+function loadState(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(raw){
+    try{
+      const parsed = JSON.parse(raw);
+      // garante que todas as coleções existam mesmo em estados antigos
+      parsed.incomes = parsed.incomes || [];
+      parsed.expenses = parsed.expenses || [];
+      parsed.categories = (parsed.categories && parsed.categories.length) ? parsed.categories : DEFAULT_CATEGORIES;
+      parsed.creditCards = parsed.creditCards || [];
+      parsed.budgetTargets = parsed.budgetTargets || { essential: 50, lifestyle: 30, investment: 20 };
+      return parsed;
+    }catch(e){
+      console.error('Estado corrompido no localStorage, reiniciando.', e);
+    }
+  }
+  return {
+    incomes: [],
+    expenses: [],
+    categories: DEFAULT_CATEGORIES,
+    creditCards: [],
+    budgetTargets: { essential: 50, lifestyle: 30, investment: 20 }
+  };
+}
+ 
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+ 
+let state = loadState();
+saveState(); // garante que o pré-cadastro seja persistido na primeira execução
+ 
+/* =========================================================
+   UTILITÁRIOS
+   ========================================================= */
+function uuid(){
+  if(crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random()*16|0, v = c === 'x' ? r : (r&0x3|0x8);
+    return v.toString(16);
+  });
+}
+ 
+function formatBRL(value){
+  const n = Number(value) || 0;
+  return n.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+}
+ 
+function formatDateBR(isoDate){
+  if(!isoDate) return '—';
+  const [y,m,d] = isoDate.split('-');
+  return `${d}/${m}/${y}`;
+}
+ 
+function todayISO(){
+  return new Date().toISOString().slice(0,10);
+}
+ 
+function currentMonthKey(){
+  return new Date().toISOString().slice(0,7); // YYYY-MM
+}
+ 
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str ?? '';
+  return div.innerHTML;
+}
+ 
+/* =========================================================
+   NAVEGAÇÃO
+   ========================================================= */
+const TABS = [
+  { id:'dashboard',  label:'Dashboard',    ready:true  },
+  { id:'incomes',    label:'Recebimentos', ready:true  },
+  { id:'expenses',   label:'Despesas',     ready:true  },
+  { id:'cards',      label:'Cartões',      ready:true  },
+  { id:'reports',    label:'Relatórios',   ready:true  },
+];
+ 
+let currentTab = 'dashboard';
+
+/* Estado de navegação do Painel de Faturas (não persistido — é apenas UI) */
+let invoiceViewCardId = null;
+let invoiceViewYear = null;
+let invoiceViewMonthIndex = null; // 0-based
+
+/* Estado de filtros do Painel de Relatórios (não persistido — é apenas UI) */
+let reportFilters = {
+  year: String(new Date().getFullYear()),
+  month: 'all',        // 'all' ou '0'..'11'
+  groupBy: 'month',    // 'month' | 'week' | 'day'
+  paymentMethod: 'all',
+  categoryId: 'all'
+};
+
+/* Guarda as instâncias ativas do Chart.js para permitir destruí-las antes de recriar */
+let reportChartInstances = { bar:null, donut:null, paymentBar:null, recurrencePie:null };
+ 
+function renderNav(){
+  const nav = document.getElementById('nav-tabs');
+  nav.innerHTML = TABS.map((t,i) => `
+    <button
+      class="ledger-tab ${t.id===currentTab?'active':''} whitespace-nowrap md:whitespace-normal text-left px-5 py-3 text-sm font-medium border-b md:border-b-0 border-r md:border-r-0"
+      style="border-color:var(--paper-line);"
+      data-tab="${t.id}">
+      <span class="opacity-60">${String(i+1).padStart(2,'0')}</span>&nbsp; ${t.label}
+    </button>
+  `).join('');
+  nav.querySelectorAll('[data-tab]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      currentTab = btn.dataset.tab;
+      renderNav();
+      renderView();
+    });
+  });
+}
+ 
+function renderView(){
+  const root = document.getElementById('view-root');
+  const tab = TABS.find(t=>t.id===currentTab);
+  if(!tab.ready){
+    root.innerHTML = renderPlaceholder(tab.label);
+    return;
+  }
+  if(tab.id === 'dashboard'){
+    root.innerHTML = renderDashboardView();
+    attachDashboardHandlers();
+  }
+  if(tab.id === 'incomes'){
+    root.innerHTML = renderIncomesView();
+    attachIncomesHandlers();
+  }
+  if(tab.id === 'expenses'){
+    root.innerHTML = renderExpensesView();
+    attachExpensesHandlers();
+  }
+  if(tab.id === 'cards'){
+    root.innerHTML = renderCardsView();
+    attachCardsHandlers();
+  }
+  if(tab.id === 'reports'){
+    root.innerHTML = renderReportsView();
+    attachReportsHandlers();
+  }
+}
+ 
+function renderPlaceholder(label){
+  return `
+    <div class="paper-card rounded-sm p-10 mt-4 text-center">
+      <p class="font-mono text-xs tracking-widest" style="color:var(--brass);">EM CONSTRUÇÃO</p>
+      <h2 class="font-display text-3xl mt-2" style="color:var(--ink);">${escapeHtml(label)}</h2>
+      <p class="text-sm mt-3" style="color:var(--ink-soft);">
+        Este módulo será implementado em uma próxima etapa. Por enquanto, use a aba
+        <strong>Recebimentos</strong> para registrar suas entradas.
+      </p>
+    </div>
+  `;
+}
+ 
+/* =========================================================
+   MÓDULO: DASHBOARD
+   ========================================================= */
+const RULE_KEYS = ['essential', 'lifestyle', 'investment'];
+const RULE_META = {
+  essential:  { label:'Essenciais',              cap:'max',  color:'var(--rust)',  bg:'var(--rust-bg)'  },
+  lifestyle:  { label:'Lazer / Estilo de Vida',  cap:'max',  color:'var(--brass)', bg:'#F5ECD9'         },
+  investment: { label:'Investimentos / Futuro',  cap:'min',  color:'var(--sage)',  bg:'var(--sage-bg)'  }
+};
+
+/**
+ * Calcula todos os indicadores (KPIs) do Dashboard para o mês vigente:
+ * totais de entrada/saída, saldo, taxa de poupança, score de pontualidade
+ * e os valores reais x ideais da Regra 50/30/20.
+ */
+function computeDashboardMetrics(){
+  const monthKey = currentMonthKey();
+  const today = todayISO();
+
+  const monthIncomes = state.incomes.filter(inc => (inc.date || '').slice(0,7) === monthKey);
+  const totalRecebido = monthIncomes.reduce((sum, inc) => sum + Number(inc.amount || 0), 0);
+
+  const monthExpenses = state.expenses.filter(exp => (exp.due_date || '').slice(0,7) === monthKey);
+  const totalGasto = monthExpenses.reduce((sum, exp) => sum + Number(exp.amount || 0), 0);
+
+  const saldoLiquido = totalRecebido - totalGasto;
+  const taxaPoupanca = totalRecebido > 0 ? (saldoLiquido / totalRecebido) * 100 : null;
+
+  // Score de pontualidade: considera despesas do mês já pagas (comparando
+  // vencimento x pagamento) e também as vencidas ainda não pagas (tratadas
+  // como "Atrasado" para fins de score).
+  let onTimeCount = 0;
+  let evaluatedCount = 0;
+  monthExpenses.forEach(exp => {
+    if(exp.payment_date){
+      evaluatedCount++;
+      const p = punctualityStatus(exp.due_date, exp.payment_date);
+      if(p && p.label !== 'Atrasado') onTimeCount++;
+    }else if(exp.due_date < today && exp.status !== 'paid'){
+      evaluatedCount++; // vencida e ainda não paga conta como atraso
+    }
+  });
+  const scorePontualidade = evaluatedCount > 0 ? (onTimeCount / evaluatedCount) * 100 : null;
+
+  // Regra 50/30/20: valor real gasto/aportado por classificação, no mês.
+  const ruleAmounts = { essential:0, lifestyle:0, investment:0 };
+  monthExpenses.forEach(exp => {
+    if(ruleAmounts.hasOwnProperty(exp.rule_50_30_20)){
+      ruleAmounts[exp.rule_50_30_20] += Number(exp.amount || 0);
+    }
+  });
+  const rulePct = {};
+  RULE_KEYS.forEach(key => {
+    rulePct[key] = totalRecebido > 0 ? (ruleAmounts[key] / totalRecebido) * 100 : 0;
+  });
+
+  return { totalRecebido, totalGasto, saldoLiquido, taxaPoupanca, scorePontualidade, ruleAmounts, rulePct };
+}
+
+function renderDashboardView(){
+  const m = computeDashboardMetrics();
+  const targets = state.budgetTargets;
+  const monthLabel = new Date().toLocaleDateString('pt-BR', { month:'long', year:'numeric' });
+
+  const saldoColor = m.saldoLiquido >= 0 ? 'var(--sage)' : 'var(--rust)';
+  const poupancaColor = m.taxaPoupanca === null ? 'var(--ink-soft)' : (m.taxaPoupanca >= 0 ? 'var(--sage)' : 'var(--rust)');
+  const pontualidadeColor = m.scorePontualidade === null
+    ? 'var(--ink-soft)'
+    : (m.scorePontualidade >= 80 ? 'var(--sage)' : m.scorePontualidade >= 50 ? 'var(--brass-dark)' : 'var(--rust)');
+
+  const kpiCard = (label, value, color, hint) => `
+    <div class="paper-card rounded-sm px-5 py-5">
+      <p class="font-mono text-[10px] tracking-widest" style="color:#8b8262;">${label}</p>
+      <p class="font-mono tabular text-2xl font-semibold mt-2" style="color:${color};">${value}</p>
+      ${hint ? `<p class="text-[11px] mt-1" style="color:var(--ink-soft);">${hint}</p>` : ''}
+    </div>
+  `;
+
+  const ruleRow = (key) => {
+    const meta = RULE_META[key];
+    const target = Number(targets[key]) || 0;
+    const real = m.rulePct[key];
+    const isMax = meta.cap === 'max';
+    // "estourado" = passou do teto (essencial/lazer) ou ficou abaixo do piso (investimento)
+    const isOverBudget = isMax ? (real > target) : (real < target);
+    const barColor = isOverBudget ? 'var(--rust)' : meta.color;
+    const barWidth = Math.min(100, real);
+    const markerLeft = Math.min(100, target);
+
+    return `
+      <div class="mb-5 last:mb-0">
+        <div class="flex items-center justify-between flex-wrap gap-2 mb-1.5">
+          <span class="text-sm font-medium" style="color:var(--ink);">${meta.label}</span>
+          <span class="font-mono text-xs tabular" style="color:${isOverBudget ? 'var(--rust)' : 'var(--ink-soft)'};">
+            ${real.toFixed(1)}% real
+            <span class="opacity-60">· meta ${isMax ? 'até' : 'mín.'}
+              <input type="number" min="0" max="100" step="1" value="${target}"
+                data-rule-target="${key}"
+                class="inline-block w-12 text-center rounded-sm px-1 py-0.5 text-xs font-mono" />%
+            </span>
+          </span>
+        </div>
+        <div class="relative w-full h-3 rounded-full overflow-hidden" style="background:${meta.bg};">
+          <div class="h-full rounded-full" style="width:${barWidth}%; background:${barColor}; transition:width .2s ease;"></div>
+          <div class="absolute top-0 h-full" style="left:${markerLeft}%; width:2px; background:var(--ink);"></div>
+        </div>
+        <p class="text-[11px] mt-1" style="color:${isOverBudget ? 'var(--rust)' : 'var(--ink-soft)'};">
+          ${isOverBudget
+            ? (isMax ? 'Meta estourada — acima do teto planejado.' : 'Abaixo da meta mínima planejada.')
+            : 'Dentro da meta planejada.'}
+          ${formatBRL(m.ruleAmounts[key])} no mês
+        </p>
+      </div>
+    `;
+  };
+
+  return `
+    <div class="mb-6">
+      <p class="font-mono text-xs tracking-widest" style="color:var(--brass);">MÓDULO 01</p>
+      <h2 class="font-display text-3xl md:text-4xl" style="color:var(--ink);">Dashboard</h2>
+      <p class="text-sm mt-1" style="color:var(--ink-soft);">Visão geral de <span class="capitalize">${monthLabel}</span>.</p>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+      ${kpiCard('TOTAL RECEBIDO', formatBRL(m.totalRecebido), 'var(--sage)')}
+      ${kpiCard('TOTAL GASTO', formatBRL(m.totalGasto), 'var(--rust)')}
+      ${kpiCard('SALDO LÍQUIDO', formatBRL(m.saldoLiquido), saldoColor)}
+      ${kpiCard('TAXA DE POUPANÇA', m.taxaPoupanca === null ? '—' : `${m.taxaPoupanca.toFixed(1)}%`, poupancaColor, m.taxaPoupanca === null ? 'sem recebimentos no mês' : null)}
+      ${kpiCard('SCORE DE PONTUALIDADE', m.scorePontualidade === null ? '—' : `${m.scorePontualidade.toFixed(0)}%`, pontualidadeColor, m.scorePontualidade === null ? 'sem dados no mês' : 'em dia ou antecipado')}
+    </div>
+
+    <!-- Regra 50/30/20 -->
+    <div class="paper-card rounded-sm p-6">
+      <div class="flex items-center justify-between flex-wrap gap-2 mb-1">
+        <h3 class="font-display text-xl" style="color:var(--ink);">Orçamento Ideal vs. Real — Regra 50/30/20</h3>
+      </div>
+      <p class="text-xs mb-5" style="color:var(--ink-soft);">
+        As metas (%) são calculadas sobre o Total Recebido no mês e são editáveis diretamente nos campos abaixo.
+      </p>
+      ${RULE_KEYS.map(ruleRow).join('')}
+      ${m.totalRecebido === 0 ? `<p class="text-[11px] mt-2" style="color:#a8a08a;">Cadastre recebimentos no mês para calcular os percentuais reais.</p>` : ''}
+    </div>
+  `;
+}
+
+function attachDashboardHandlers(){
+  document.querySelectorAll('[data-rule-target]').forEach(input => {
+    input.addEventListener('change', () => {
+      const key = input.getAttribute('data-rule-target');
+      let value = parseFloat(input.value);
+      if(isNaN(value) || value < 0) value = 0;
+      if(value > 100) value = 100;
+      state.budgetTargets[key] = value;
+      saveState();
+      renderView();
+    });
+  });
+}
+
+/* =========================================================
+   MÓDULO: RECEBIMENTOS
+   ========================================================= */
+const ACCOUNT_OPTIONS = ['Banco', 'Carteira', 'Investimentos'];
+ 
+function renderIncomesView(){
+  const monthIncomes = state.incomes.filter(inc => (inc.date || '').slice(0,7) === currentMonthKey());
+  const totalMonth = monthIncomes.reduce((sum, inc) => sum + Number(inc.amount || 0), 0);
+ 
+  const sortedIncomes = [...state.incomes].sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+ 
+  return `
+    <div class="mb-6">
+      <p class="font-mono text-xs tracking-widest" style="color:var(--brass);">MÓDULO 02</p>
+      <h2 class="font-display text-3xl md:text-4xl" style="color:var(--ink);">Recebimentos</h2>
+      <p class="text-sm mt-1" style="color:var(--ink-soft);">Registre tudo o que entra: salário, freelas, rendimentos e outras origens.</p>
+    </div>
+ 
+    <!-- Total do mês -->
+    <div class="paper-card rounded-sm px-6 py-5 mb-6 flex items-center justify-between flex-wrap gap-3">
+      <div>
+        <p class="font-mono text-[11px] tracking-widest" style="color:#8b8262;">TOTAL RECEBIDO NO MÊS</p>
+        <p class="font-mono tabular text-3xl font-semibold mt-1" style="color:var(--sage);">${formatBRL(totalMonth)}</p>
+      </div>
+      <span class="stamp text-xs px-3 py-1" style="color:var(--sage);">${monthIncomes.length} lançamento${monthIncomes.length===1?'':'s'} em ${new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}</span>
+    </div>
+ 
+    <!-- Formulário -->
+    <form id="income-form" class="paper-card rounded-sm p-6 mb-8">
+      <h3 class="font-display text-xl mb-4" style="color:var(--ink);">Novo recebimento</h3>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="md:col-span-1">
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Fonte / Origem</label>
+          <input type="text" id="inc-source" required placeholder="Ex: Salário" class="w-full rounded-sm px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Valor (R$)</label>
+          <input type="number" id="inc-amount" required min="0.01" step="0.01" placeholder="0,00" class="w-full rounded-sm px-3 py-2 text-sm font-mono" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Data</label>
+          <input type="date" id="inc-date" required value="${todayISO()}" class="w-full rounded-sm px-3 py-2 text-sm font-mono" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Conta de destino</label>
+          <select id="inc-destination" class="w-full rounded-sm px-3 py-2 text-sm">
+            ${ACCOUNT_OPTIONS.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="mt-4">
+        <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Observações</label>
+        <input type="text" id="inc-notes" placeholder="Opcional" class="w-full rounded-sm px-3 py-2 text-sm" />
+      </div>
+      <div class="mt-5 flex justify-end">
+        <button type="submit" class="btn-primary rounded-sm px-5 py-2.5 text-sm font-semibold">Adicionar recebimento</button>
+      </div>
+    </form>
+ 
+    <!-- Lista -->
+    <div class="paper-card rounded-sm overflow-hidden">
+      <div class="px-6 py-4 border-b" style="border-color:var(--paper-line);">
+        <h3 class="font-display text-xl" style="color:var(--ink);">Lançamentos</h3>
+      </div>
+      ${sortedIncomes.length === 0 ? `
+        <div class="px-6 py-10 text-center">
+          <p class="text-sm" style="color:var(--ink-soft);">Nenhum recebimento cadastrado ainda.</p>
+        </div>
+      ` : `
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left font-mono text-[11px] tracking-wider" style="color:#8b8262; background:#F1EDE0;">
+                <th class="px-6 py-3 font-medium">Data</th>
+                <th class="px-4 py-3 font-medium">Origem</th>
+                <th class="px-4 py-3 font-medium">Conta</th>
+                <th class="px-4 py-3 font-medium">Observações</th>
+                <th class="px-4 py-3 font-medium text-right">Valor</th>
+                <th class="px-6 py-3 font-medium text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${sortedIncomes.map(inc => `
+                <tr class="row-hover border-t" style="border-color:var(--paper-line);">
+                  <td class="px-6 py-3 font-mono tabular" style="color:var(--ink-soft);">${formatDateBR(inc.date)}</td>
+                  <td class="px-4 py-3">${escapeHtml(inc.source)}</td>
+                  <td class="px-4 py-3">
+                    <span class="stamp text-[10px] px-2 py-0.5" style="color:var(--brass-dark);">${escapeHtml(inc.destination_account)}</span>
+                  </td>
+                  <td class="px-4 py-3" style="color:var(--ink-soft);">${escapeHtml(inc.notes) || '—'}</td>
+                  <td class="px-4 py-3 text-right font-mono tabular font-semibold" style="color:var(--sage);">${formatBRL(inc.amount)}</td>
+                  <td class="px-6 py-3 text-right">
+                    <button data-delete-income="${inc.id}" class="font-mono text-xs px-2 py-1 rounded-sm hover:bg-[var(--rust-bg)]" style="color:var(--rust);">excluir</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `}
+    </div>
+  `;
+}
+ 
+function attachIncomesHandlers(){
+  const form = document.getElementById('income-form');
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+ 
+    const source = document.getElementById('inc-source').value.trim();
+    const amount = parseFloat(document.getElementById('inc-amount').value);
+    const date = document.getElementById('inc-date').value;
+    const destination_account = document.getElementById('inc-destination').value;
+    const notes = document.getElementById('inc-notes').value.trim();
+ 
+    if(!source || !amount || amount <= 0 || !date){
+      alert('Preencha Fonte, Valor (maior que zero) e Data para continuar.');
+      return;
+    }
+ 
+    const newIncome = {
+      id: uuid(),
+      source,
+      amount,
+      date,
+      destination_account,
+      notes
+    };
+ 
+    state.incomes.push(newIncome);
+    saveState();
+    renderView();
+  });
+ 
+  document.querySelectorAll('[data-delete-income]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-delete-income');
+      const target = state.incomes.find(inc => inc.id === id);
+      const label = target ? `"${target.source}" de ${formatBRL(target.amount)}` : 'este recebimento';
+      if(confirm(`Excluir ${label}? Esta ação não pode ser desfeita.`)){
+        state.incomes = state.incomes.filter(inc => inc.id !== id);
+        saveState();
+        renderView();
+      }
+    });
+  });
+}
+ 
+/* =========================================================
+   MÓDULO: DESPESAS
+   ========================================================= */
+const PAYMENT_METHOD_OPTIONS = [
+  { value:'cash',       label:'Dinheiro Vivo' },
+  { value:'debit',      label:'Cartão de Débito' },
+  { value:'meal_card',  label:'Vale Alimentação/Refeição' },
+  { value:'pix',        label:'PIX' },
+  { value:'invoice',    label:'Boleto' },
+  { value:'credit_card', label:'Cartão de Crédito' },
+];
+ 
+const RECURRENCE_OPTIONS = [
+  { value:'fixed',     label:'Fixa',       hint:'mesmo valor todo mês' },
+  { value:'variable',  label:'Variável',   hint:'mensal, valor oscilante' },
+  { value:'sporadic',  label:'Esporádica', hint:'eventual' },
+];
+ 
+const RULE_502030_OPTIONS = [
+  { value:'essential',  label:'Essencial',              hint:'50%' },
+  { value:'lifestyle',  label:'Lazer/Estilo de Vida',   hint:'30%' },
+  { value:'investment', label:'Investimentos/Futuro',   hint:'20%' },
+];
+ 
+function paymentMethodLabel(value){
+  const found = PAYMENT_METHOD_OPTIONS.find(o => o.value === value);
+  return found ? found.label : value;
+}
+ 
+function recurrenceLabel(value){
+  const found = RECURRENCE_OPTIONS.find(o => o.value === value);
+  return found ? found.label : value;
+}
+ 
+function ruleLabel(value){
+  const found = RULE_502030_OPTIONS.find(o => o.value === value);
+  return found ? found.label : value;
+}
+ 
+function findCategory(catId){
+  return state.categories.find(c => c.id === catId);
+}
+ 
+function findSubcategory(catId, subId){
+  const cat = findCategory(catId);
+  if(!cat) return null;
+  return (cat.subcategories || []).find(s => s.id === subId);
+}
+ 
+/**
+ * Compara data de vencimento com data de pagamento efetivo e classifica a pontualidade.
+ * Retorna null quando a despesa ainda não foi paga (sem payment_date).
+ */
+function punctualityStatus(dueDate, paymentDate){
+  if(!paymentDate) return null;
+  if(paymentDate < dueDate) return { label:'Antecipado', tone:'sage' };
+  if(paymentDate === dueDate) return { label:'No Prazo', tone:'brass' };
+  return { label:'Atrasado', tone:'rust' };
+}
+ 
+function toneVar(tone){
+  if(tone === 'sage') return { color:'var(--sage)' };
+  if(tone === 'rust') return { color:'var(--rust)' };
+  return { color:'var(--brass-dark)' };
+}
+ 
+function renderExpensesView(){
+  const monthExpenses = state.expenses.filter(exp => (exp.due_date || '').slice(0,7) === currentMonthKey());
+  const totalMonth = monthExpenses.reduce((sum, exp) => sum + Number(exp.amount || 0), 0);
+ 
+  const sortedExpenses = [...state.expenses].sort((a,b) => (b.due_date || '').localeCompare(a.due_date || ''));
+ 
+  return `
+    <div class="mb-6">
+      <p class="font-mono text-xs tracking-widest" style="color:var(--brass);">MÓDULO 03</p>
+      <h2 class="font-display text-3xl md:text-4xl" style="color:var(--ink);">Despesas</h2>
+      <p class="text-sm mt-1" style="color:var(--ink-soft);">Registre tudo o que sai: contas, compras e pagamentos do dia a dia.</p>
+    </div>
+ 
+    <!-- Total do mês -->
+    <div class="paper-card rounded-sm px-6 py-5 mb-6 flex items-center justify-between flex-wrap gap-3">
+      <div>
+        <p class="font-mono text-[11px] tracking-widest" style="color:#8b8262;">TOTAL DE DESPESAS NO MÊS</p>
+        <p class="font-mono tabular text-3xl font-semibold mt-1" style="color:var(--rust);">${formatBRL(totalMonth)}</p>
+      </div>
+      <span class="stamp text-xs px-3 py-1" style="color:var(--rust);">${monthExpenses.length} lançamento${monthExpenses.length===1?'':'s'} em ${new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}</span>
+    </div>
+ 
+    <!-- Formulário -->
+    <form id="expense-form" class="paper-card rounded-sm p-6 mb-8">
+      <h3 class="font-display text-xl mb-4" style="color:var(--ink);">Nova despesa</h3>
+ 
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Descrição</label>
+          <input type="text" id="exp-description" required placeholder="Ex: Conta de luz" class="w-full rounded-sm px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Valor (R$)</label>
+          <input type="number" id="exp-amount" required min="0.01" step="0.01" placeholder="0,00" class="w-full rounded-sm px-3 py-2 text-sm font-mono" />
+        </div>
+      </div>
+ 
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Data da Compra / Vencimento</label>
+          <input type="date" id="exp-due-date" required value="${todayISO()}" class="w-full rounded-sm px-3 py-2 text-sm font-mono" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Data de Pagamento Efetivo</label>
+          <input type="date" id="exp-payment-date" class="w-full rounded-sm px-3 py-2 text-sm font-mono" />
+          <p class="text-[11px] mt-1" style="color:#a8a08a;">Opcional — deixe em branco se ainda não foi pago.</p>
+        </div>
+      </div>
+ 
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Categoria</label>
+          <select id="exp-category" class="w-full rounded-sm px-3 py-2 text-sm">
+            ${state.categories.map(cat => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Subcategoria</label>
+          <select id="exp-subcategory" required class="w-full rounded-sm px-3 py-2 text-sm">
+            <!-- populado dinamicamente via JS a partir da categoria selecionada -->
+          </select>
+        </div>
+      </div>
+ 
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Forma de Pagamento</label>
+          <select id="exp-payment-method" class="w-full rounded-sm px-3 py-2 text-sm">
+            ${PAYMENT_METHOD_OPTIONS.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Status do Pagamento</label>
+          <select id="exp-status" class="w-full rounded-sm px-3 py-2 text-sm">
+            <option value="pending">Pendente</option>
+            <option value="paid">Pago</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Campos condicionais: Cartão de Crédito -->
+      <div id="exp-cc-fields" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 hidden">
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Cartão de Crédito</label>
+          <select id="exp-cc-card" class="w-full rounded-sm px-3 py-2 text-sm">
+            ${state.creditCards.length === 0
+              ? `<option value="" disabled selected>Nenhum cartão cadastrado</option>`
+              : state.creditCards.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}
+          </select>
+          ${state.creditCards.length === 0 ? `<p class="text-[11px] mt-1" style="color:var(--rust);">Cadastre um cartão na aba Cartões antes de continuar.</p>` : ''}
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Número de Parcelas</label>
+          <select id="exp-cc-installments" class="w-full rounded-sm px-3 py-2 text-sm">
+            ${Array.from({length:24}, (_,i)=>i+1).map(n => `<option value="${n}">${n===1 ? '1x à vista (fatura)' : n + 'x'}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+ 
+      <!-- Classificações obrigatórias -->
+      <div class="mt-6 pt-5 border-t" style="border-color:var(--paper-line);">
+        <p class="font-mono text-[11px] tracking-widest mb-3" style="color:var(--brass);">CLASSIFICAÇÃO OBRIGATÓRIA</p>
+ 
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label class="block text-xs font-medium mb-2" style="color:var(--ink-soft);">Recorrência</label>
+            <div class="flex flex-wrap gap-2" id="exp-recurrence-group">
+              ${RECURRENCE_OPTIONS.map((o,i) => `
+                <label class="cursor-pointer">
+                  <input type="radio" name="exp-recurrence" value="${o.value}" class="sr-only peer" ${i===0?'checked':''} />
+                  <span class="block px-3 py-2 rounded-sm text-xs font-mono border peer-checked:text-white transition-colors"
+                        style="border-color:var(--paper-line);"
+                        data-radio-pill="recurrence">
+                    ${o.label} <span class="opacity-60">· ${o.hint}</span>
+                  </span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+ 
+          <div>
+            <label class="block text-xs font-medium mb-2" style="color:var(--ink-soft);">Regra 50/30/20</label>
+            <div class="flex flex-wrap gap-2" id="exp-rule-group">
+              ${RULE_502030_OPTIONS.map((o,i) => `
+                <label class="cursor-pointer">
+                  <input type="radio" name="exp-rule" value="${o.value}" class="sr-only peer" ${i===0?'checked':''} />
+                  <span class="block px-3 py-2 rounded-sm text-xs font-mono border peer-checked:text-white transition-colors"
+                        style="border-color:var(--paper-line);"
+                        data-radio-pill="rule">
+                    ${o.label} <span class="opacity-60">· ${o.hint}</span>
+                  </span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+ 
+      <div class="mt-5 flex justify-end">
+        <button type="submit" class="btn-primary rounded-sm px-5 py-2.5 text-sm font-semibold">Adicionar despesa</button>
+      </div>
+    </form>
+ 
+    <!-- Lista -->
+    <div class="paper-card rounded-sm overflow-hidden">
+      <div class="px-6 py-4 border-b" style="border-color:var(--paper-line);">
+        <h3 class="font-display text-xl" style="color:var(--ink);">Lançamentos</h3>
+      </div>
+      ${sortedExpenses.length === 0 ? `
+        <div class="px-6 py-10 text-center">
+          <p class="text-sm" style="color:var(--ink-soft);">Nenhuma despesa cadastrada ainda.</p>
+        </div>
+      ` : `
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left font-mono text-[11px] tracking-wider" style="color:#8b8262; background:#F1EDE0;">
+                <th class="px-6 py-3 font-medium">Vencimento</th>
+                <th class="px-4 py-3 font-medium">Descrição</th>
+                <th class="px-4 py-3 font-medium">Categoria</th>
+                <th class="px-4 py-3 font-medium">Pagamento</th>
+                <th class="px-4 py-3 font-medium">Classificação</th>
+                <th class="px-4 py-3 font-medium">Pontualidade</th>
+                <th class="px-4 py-3 font-medium text-right">Valor</th>
+                <th class="px-4 py-3 font-medium text-center">Status</th>
+                <th class="px-6 py-3 font-medium text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${sortedExpenses.map(exp => {
+                const cat = findCategory(exp.category_id);
+                const sub = findSubcategory(exp.category_id, exp.subcategory_id);
+                const punctuality = punctualityStatus(exp.due_date, exp.payment_date);
+                const isOverdueUnpaid = !exp.payment_date && exp.status !== 'paid' && exp.due_date < todayISO();
+                return `
+                <tr class="row-hover border-t" style="border-color:var(--paper-line);">
+                  <td class="px-6 py-3 font-mono tabular" style="color:var(--ink-soft);">${formatDateBR(exp.due_date)}</td>
+                  <td class="px-4 py-3">${escapeHtml(exp.description)}</td>
+                  <td class="px-4 py-3 text-xs" style="color:var(--ink-soft);">
+                    ${cat ? escapeHtml(cat.name) : '—'}${sub ? ' › ' + escapeHtml(sub.name) : ''}
+                  </td>
+                  <td class="px-4 py-3 text-xs" style="color:var(--ink-soft);">${paymentMethodLabel(exp.payment_method)}</td>
+                  <td class="px-4 py-3 text-xs" style="color:var(--ink-soft);">
+                    <div>${recurrenceLabel(exp.recurrence)}</div>
+                    <div class="opacity-70">${ruleLabel(exp.rule_50_30_20)}</div>
+                  </td>
+                  <td class="px-4 py-3">
+                    ${punctuality
+                      ? `<span class="stamp text-[10px] px-2 py-0.5" style="${Object.entries(toneVar(punctuality.tone)).map(([k,v])=>`${k}:${v}`).join(';')}">${punctuality.label}</span>`
+                      : isOverdueUnpaid
+                        ? `<span class="stamp text-[10px] px-2 py-0.5" style="color:var(--rust);">Vencida</span>`
+                        : `<span class="text-xs" style="color:#a8a08a;">—</span>`
+                    }
+                  </td>
+                  <td class="px-4 py-3 text-right font-mono tabular font-semibold" style="color:var(--rust);">${formatBRL(exp.amount)}</td>
+                  <td class="px-4 py-3 text-center">
+                    <button data-toggle-status="${exp.id}"
+                      class="font-mono text-[10px] px-2 py-1 rounded-sm border"
+                      style="${exp.status === 'paid' ? 'color:var(--sage); border-color:var(--sage);' : 'color:var(--brass-dark); border-color:var(--brass);'}">
+                      ${exp.status === 'paid' ? 'PAGO' : 'PENDENTE'}
+                    </button>
+                  </td>
+                  <td class="px-6 py-3 text-right">
+                    <button data-delete-expense="${exp.id}" class="font-mono text-xs px-2 py-1 rounded-sm hover:bg-[var(--rust-bg)]" style="color:var(--rust);">excluir</button>
+                  </td>
+                </tr>
+              `;}).join('')}
+            </tbody>
+          </table>
+        </div>
+      `}
+    </div>
+  `;
+}
+ 
+/**
+ * Preenche o select de Subcategoria com base na Categoria selecionada no momento.
+ */
+function refreshSubcategoryOptions(preserveSelection){
+  const categorySelect = document.getElementById('exp-category');
+  const subcategorySelect = document.getElementById('exp-subcategory');
+  if(!categorySelect || !subcategorySelect) return;
+ 
+  const cat = findCategory(categorySelect.value);
+  const subs = cat ? (cat.subcategories || []) : [];
+  const previousValue = preserveSelection ? subcategorySelect.value : null;
+ 
+  subcategorySelect.innerHTML = subs.length
+    ? subs.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')
+    : `<option value="" disabled>Nenhuma subcategoria cadastrada</option>`;
+ 
+  if(previousValue && subs.some(s => s.id === previousValue)){
+    subcategorySelect.value = previousValue;
+  }
+}
+ 
+/**
+ * Aplica o estilo visual (preenchido/latão ou vazio) aos "pills" de rádio de classificação.
+ */
+function refreshRadioPills(groupSelector, activeColorVar){
+  const group = document.querySelector(groupSelector);
+  if(!group) return;
+  group.querySelectorAll('input[type="radio"]').forEach(input => {
+    const pill = input.nextElementSibling;
+    if(input.checked){
+      pill.style.backgroundColor = activeColorVar;
+      pill.style.borderColor = activeColorVar;
+      pill.style.color = '#FFFEF9';
+    }else{
+      pill.style.backgroundColor = 'transparent';
+      pill.style.borderColor = 'var(--paper-line)';
+      pill.style.color = 'var(--ink-soft)';
+    }
+  });
+}
+ 
+function attachExpensesHandlers(){
+  refreshSubcategoryOptions(false);
+  refreshRadioPills('#exp-recurrence-group', 'var(--brass)');
+  refreshRadioPills('#exp-rule-group', 'var(--ink)');
+ 
+  const categorySelect = document.getElementById('exp-category');
+  categorySelect.addEventListener('change', () => {
+    refreshSubcategoryOptions(false);
+  });
+ 
+  const paymentMethodSelect = document.getElementById('exp-payment-method');
+  const ccFields = document.getElementById('exp-cc-fields');
+  function refreshCcFieldsVisibility(){
+    if(paymentMethodSelect.value === 'credit_card'){
+      ccFields.classList.remove('hidden');
+    }else{
+      ccFields.classList.add('hidden');
+    }
+  }
+  refreshCcFieldsVisibility();
+  paymentMethodSelect.addEventListener('change', refreshCcFieldsVisibility);
+ 
+  document.querySelectorAll('#exp-recurrence-group input[type="radio"]').forEach(input => {
+    input.addEventListener('change', () => refreshRadioPills('#exp-recurrence-group', 'var(--brass)'));
+  });
+  document.querySelectorAll('#exp-rule-group input[type="radio"]').forEach(input => {
+    input.addEventListener('change', () => refreshRadioPills('#exp-rule-group', 'var(--ink)'));
+  });
+ 
+  const form = document.getElementById('expense-form');
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+ 
+    const description = document.getElementById('exp-description').value.trim();
+    const amount = parseFloat(document.getElementById('exp-amount').value);
+    const due_date = document.getElementById('exp-due-date').value;
+    const payment_date = document.getElementById('exp-payment-date').value || null;
+    const category_id = document.getElementById('exp-category').value;
+    const subcategory_id = document.getElementById('exp-subcategory').value;
+    const payment_method = document.getElementById('exp-payment-method').value;
+    const status = document.getElementById('exp-status').value;
+    const recurrence = form.querySelector('input[name="exp-recurrence"]:checked').value;
+    const rule_50_30_20 = form.querySelector('input[name="exp-rule"]:checked').value;
+ 
+    if(!description || !amount || amount <= 0 || !due_date){
+      alert('Preencha Descrição, Valor (maior que zero) e Data de Vencimento para continuar.');
+      return;
+    }
+    if(!subcategory_id){
+      alert('Selecione uma Subcategoria. Se a categoria escolhida não tiver subcategorias, cadastre uma antes de continuar.');
+      return;
+    }
+
+    if(payment_method === 'credit_card'){
+      const cardId = document.getElementById('exp-cc-card').value;
+      const installmentsTotal = parseInt(document.getElementById('exp-cc-installments').value, 10);
+      const card = findCreditCard(cardId);
+
+      if(!card){
+        alert('Selecione um Cartão de Crédito válido. Cadastre um cartão na aba Cartões antes de continuar.');
+        return;
+      }
+
+      const available = cardAvailableLimit(card);
+      if(amount > available){
+        if(!confirm(`Atenção: o valor total (${formatBRL(amount)}) excede o limite disponível do cartão (${formatBRL(available)}). Deseja continuar mesmo assim?`)){
+          return;
+        }
+      }
+
+      const installments = generateCreditCardInstallments({
+        description, amount, purchaseDate: due_date, card,
+        installmentsTotal, category_id, subcategory_id,
+        recurrence, rule_50_30_20, payment_date, status
+      });
+
+      state.expenses.push(...installments);
+      saveState();
+      renderView();
+      return;
+    }
+
+    const newExpense = {
+      id: uuid(),
+      description,
+      amount,
+      due_date,
+      payment_date,
+      category_id,
+      subcategory_id,
+      payment_method,
+      recurrence,
+      rule_50_30_20,
+      is_credit_card: false,
+      credit_card_id: null,
+      installment_current: 1,
+      installment_total: 1,
+      status
+    };
+ 
+    state.expenses.push(newExpense);
+    saveState();
+    renderView();
+  });
+ 
+  document.querySelectorAll('[data-toggle-status]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-toggle-status');
+      const expense = state.expenses.find(exp => exp.id === id);
+      if(!expense) return;
+ 
+      if(expense.status === 'paid'){
+        expense.status = 'pending';
+        expense.payment_date = null;
+      }else{
+        expense.status = 'paid';
+        if(!expense.payment_date){
+          expense.payment_date = todayISO();
+        }
+      }
+      saveState();
+      renderView();
+    });
+  });
+ 
+  document.querySelectorAll('[data-delete-expense]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-delete-expense');
+      const target = state.expenses.find(exp => exp.id === id);
+      const label = target ? `"${target.description}" de ${formatBRL(target.amount)}` : 'esta despesa';
+      if(confirm(`Excluir ${label}? Esta ação não pode ser desfeita.`)){
+        state.expenses = state.expenses.filter(exp => exp.id !== id);
+        saveState();
+        renderView();
+      }
+    });
+  });
+}
+ 
+/* =========================================================
+   MÓDULO: CARTÕES DE CRÉDITO
+   ========================================================= */
+function findCreditCard(id){
+  return state.creditCards.find(c => c.id === id);
+}
+
+/**
+ * Soma o valor de todas as parcelas/lançamentos vinculados ao cartão que
+ * ainda não foram quitados (status !== 'paid'). Isso representa o limite
+ * comprometido/utilizado no momento.
+ */
+function cardUsedLimit(card){
+  return state.expenses
+    .filter(exp => exp.is_credit_card && exp.credit_card_id === card.id && exp.status !== 'paid')
+    .reduce((sum, exp) => sum + Number(exp.amount || 0), 0);
+}
+
+function cardAvailableLimit(card){
+  return Number(card.total_limit || 0) - cardUsedLimit(card);
+}
+
+/* =========================================================
+   MOTOR DE FATURAS: visualização, quitação e antecipação
+   ========================================================= */
+
+/**
+ * Chave YYYY-MM a partir de ano + mês (0-based).
+ */
+function monthKeyFromParts(year, monthIndexZeroBased){
+  return `${year}-${String(monthIndexZeroBased + 1).padStart(2,'0')}`;
+}
+
+/**
+ * Valor comparável (ordem cronológica) para um par ano/mês.
+ */
+function invoiceOrderValue(year, monthIndexZeroBased){
+  return year * 12 + monthIndexZeroBased;
+}
+
+/**
+ * Retorna a fatura "aberta" de um cartão hoje: a fatura em que uma compra
+ * feita agora seria lançada, usando a mesma regra de fechamento das compras.
+ */
+function openInvoiceOf(card){
+  return firstInstallmentInvoiceMonth(todayISO(), card);
+}
+
+/**
+ * Todas as despesas (parcelas) de um cartão vinculadas a uma fatura
+ * específica (identificada por ano/mês da data de vencimento).
+ */
+function getInvoiceExpenses(cardId, year, monthIndexZeroBased){
+  const key = monthKeyFromParts(year, monthIndexZeroBased);
+  return state.expenses.filter(exp =>
+    exp.is_credit_card && exp.credit_card_id === cardId && (exp.due_date || '').slice(0,7) === key
+  );
+}
+
+/**
+ * Classifica uma fatura (ano/mês) em relação à fatura aberta atual do cartão.
+ */
+function invoiceStatus(card, year, monthIndexZeroBased){
+  const open = openInvoiceOf(card);
+  const diff = invoiceOrderValue(year, monthIndexZeroBased) - invoiceOrderValue(open.year, open.monthIndex);
+  if(diff === 0) return 'open';
+  if(diff < 0) return 'closed';
+  return 'future';
+}
+
+/**
+ * Garante que o estado de navegação do painel de faturas aponte para um
+ * cartão e mês/ano válidos, inicializando na fatura aberta do primeiro cartão.
+ */
+function ensureInvoiceViewState(){
+  if(state.creditCards.length === 0){
+    invoiceViewCardId = null;
+    return;
+  }
+  const cardStillExists = state.creditCards.some(c => c.id === invoiceViewCardId);
+  if(!cardStillExists){
+    invoiceViewCardId = state.creditCards[0].id;
+    const open = openInvoiceOf(state.creditCards[0]);
+    invoiceViewYear = open.year;
+    invoiceViewMonthIndex = open.monthIndex;
+  }
+  if(invoiceViewYear === null || invoiceViewMonthIndex === null){
+    const card = findCreditCard(invoiceViewCardId);
+    const open = openInvoiceOf(card);
+    invoiceViewYear = open.year;
+    invoiceViewMonthIndex = open.monthIndex;
+  }
+}
+
+function invoiceStatusBadge(status){
+  if(status === 'open') return `<span class="stamp text-[10px] px-2 py-0.5" style="color:var(--brass-dark);">Fatura Aberta</span>`;
+  if(status === 'future') return `<span class="stamp text-[10px] px-2 py-0.5" style="color:var(--sage);">Fatura Futura</span>`;
+  return `<span class="stamp text-[10px] px-2 py-0.5" style="color:var(--rust);">Fatura Fechada</span>`;
+}
+
+/**
+ * Marca todas as parcelas de uma fatura como pagas, na data atual, e
+ * consequentemente libera o limite do cartão (via cardUsedLimit, que só
+ * considera despesas com status !== 'paid').
+ */
+function payInvoice(cardId, year, monthIndexZeroBased){
+  const items = getInvoiceExpenses(cardId, year, monthIndexZeroBased);
+  const pending = items.filter(exp => exp.status !== 'paid');
+  if(pending.length === 0){
+    alert('Não há lançamentos pendentes nesta fatura.');
+    return;
+  }
+  const total = pending.reduce((sum, exp) => sum + Number(exp.amount || 0), 0);
+  if(!confirm(`Confirmar pagamento da fatura no valor de ${formatBRL(total)}? Isso quitará ${pending.length} lançamento${pending.length===1?'':'s'} e restabelecerá o limite correspondente.`)){
+    return;
+  }
+  const paymentDate = todayISO();
+  pending.forEach(exp => {
+    exp.status = 'paid';
+    exp.payment_date = paymentDate;
+  });
+  saveState();
+  renderView();
+}
+
+/**
+ * Antecipa uma parcela específica: move-a da sua fatura futura original
+ * para a fatura aberta atual do cartão, recalculando o vencimento.
+ */
+function anticipateInstallment(expenseId){
+  const exp = state.expenses.find(e => e.id === expenseId);
+  if(!exp || !exp.is_credit_card) return;
+  const card = findCreditCard(exp.credit_card_id);
+  if(!card) return;
+
+  const open = openInvoiceOf(card);
+  const [expYear, expMonth] = (exp.due_date || '').split('-').map(Number);
+  const expOrder = invoiceOrderValue(expYear, expMonth - 1);
+  const openOrder = invoiceOrderValue(open.year, open.monthIndex);
+
+  if(expOrder <= openOrder){
+    alert('Esta parcela já está na fatura aberta ou em uma fatura já fechada; não é possível antecipar.');
+    return;
+  }
+
+  if(!confirm(`Antecipar "${exp.description}" (${formatBRL(exp.amount)}) para a fatura aberta atual? O vencimento será atualizado.`)){
+    return;
+  }
+
+  exp.due_date = buildISODateClamped(open.year, open.monthIndex, Number(card.due_day));
+  exp.was_anticipated = true;
+  saveState();
+  renderView();
+}
+
+/**
+ * Retorna o último dia válido de um mês (para evitar datas como 31/fev).
+ */
+function lastDayOfMonth(year, monthIndexZeroBased){
+  return new Date(year, monthIndexZeroBased + 1, 0).getDate();
+}
+
+/**
+ * Constrói uma data ISO (YYYY-MM-DD) a partir de um ano/mês(0-based) e dia,
+ * "clampando" o dia caso o mês não o possua (ex: dia 31 em abril -> 30).
+ */
+function buildISODateClamped(year, monthIndexZeroBased, day){
+  const clampedDay = Math.min(day, lastDayOfMonth(year, monthIndexZeroBased));
+  const mm = String(monthIndexZeroBased + 1).padStart(2, '0');
+  const dd = String(clampedDay).padStart(2, '0');
+  return `${year}-${mm}-${dd}`;
+}
+
+/**
+ * Determina o mês/ano (0-based) da fatura em que a 1ª parcela de uma compra
+ * deve entrar, com base na data da compra e no dia de fechamento do cartão.
+ * Regra: compra até o dia de fechamento -> fatura do mês corrente da compra.
+ *        compra após o dia de fechamento -> fatura do mês seguinte.
+ */
+function firstInstallmentInvoiceMonth(purchaseDateISO, card){
+  const [y, m, d] = purchaseDateISO.split('-').map(Number);
+  const purchaseYear = y;
+  const purchaseMonthIndex = m - 1; // 0-based
+  const purchaseDay = d;
+
+  if(purchaseDay <= Number(card.closing_day)){
+    return { year: purchaseYear, monthIndex: purchaseMonthIndex };
+  }
+  const next = new Date(purchaseYear, purchaseMonthIndex + 1, 1);
+  return { year: next.getFullYear(), monthIndex: next.getMonth() };
+}
+
+/**
+ * Gera os N registros de despesa (parcelas) de uma compra no cartão de
+ * crédito, já distribuídos nas faturas consecutivas corretas, com a data
+ * de vencimento ajustada para o dia_vencimento do cartão em cada mês.
+ */
+function generateCreditCardInstallments(params){
+  const {
+    description, amount, purchaseDate, card, installmentsTotal,
+    category_id, subcategory_id, recurrence, rule_50_30_20,
+    payment_date, status
+  } = params;
+
+  const baseInvoice = firstInstallmentInvoiceMonth(purchaseDate, card);
+  const perInstallmentAmount = Math.round((amount / installmentsTotal) * 100) / 100;
+
+  const installments = [];
+  for(let i = 1; i <= installmentsTotal; i++){
+    const offset = i - 1;
+    const invoiceDate = new Date(baseInvoice.year, baseInvoice.monthIndex + offset, 1);
+    const invoiceYear = invoiceDate.getFullYear();
+    const invoiceMonthIndex = invoiceDate.getMonth();
+    const due_date = buildISODateClamped(invoiceYear, invoiceMonthIndex, Number(card.due_day));
+
+    // ajusta eventual arredondamento na última parcela para que a soma bata com o valor total
+    let installmentAmount = perInstallmentAmount;
+    if(i === installmentsTotal){
+      const sumSoFar = perInstallmentAmount * (installmentsTotal - 1);
+      installmentAmount = Math.round((amount - sumSoFar) * 100) / 100;
+    }
+
+    installments.push({
+      id: uuid(),
+      description: `${description} (Parcela ${i}/${installmentsTotal})`,
+      amount: installmentAmount,
+      due_date,
+      payment_date: (i === 1 && status === 'paid') ? (payment_date || todayISO()) : null,
+      category_id,
+      subcategory_id,
+      payment_method: 'credit_card',
+      recurrence,
+      rule_50_30_20,
+      is_credit_card: true,
+      credit_card_id: card.id,
+      installment_current: i,
+      installment_total: installmentsTotal,
+      status: (i === 1 && status === 'paid') ? 'paid' : 'pending'
+    });
+  }
+  return installments;
+}
+
+function renderCardsView(){
+  ensureInvoiceViewState();
+  return `
+    <div class="mb-6">
+      <p class="font-mono text-xs tracking-widest" style="color:var(--brass);">MÓDULO 04</p>
+      <h2 class="font-display text-3xl md:text-4xl" style="color:var(--ink);">Cartões</h2>
+      <p class="text-sm mt-1" style="color:var(--ink-soft);">Cadastre seus cartões de crédito e acompanhe limite utilizado e disponível.</p>
+    </div>
+
+    <!-- Formulário -->
+    <form id="card-form" class="paper-card rounded-sm p-6 mb-8">
+      <h3 class="font-display text-xl mb-4" style="color:var(--ink);">Novo cartão</h3>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="md:col-span-1">
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Nome do Cartão</label>
+          <input type="text" id="card-name" required placeholder="Ex: Nubank" class="w-full rounded-sm px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Limite Total (R$)</label>
+          <input type="number" id="card-limit" required min="0.01" step="0.01" placeholder="0,00" class="w-full rounded-sm px-3 py-2 text-sm font-mono" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Dia de Fechamento</label>
+          <input type="number" id="card-closing-day" required min="1" max="31" step="1" placeholder="1-31" class="w-full rounded-sm px-3 py-2 text-sm font-mono" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Dia de Vencimento</label>
+          <input type="number" id="card-due-day" required min="1" max="31" step="1" placeholder="1-31" class="w-full rounded-sm px-3 py-2 text-sm font-mono" />
+        </div>
+      </div>
+      <div class="mt-5 flex justify-end">
+        <button type="submit" class="btn-primary rounded-sm px-5 py-2.5 text-sm font-semibold">Adicionar cartão</button>
+      </div>
+    </form>
+
+    <!-- Lista de cartões -->
+    ${state.creditCards.length === 0 ? `
+      <div class="paper-card rounded-sm px-6 py-10 text-center">
+        <p class="text-sm" style="color:var(--ink-soft);">Nenhum cartão cadastrado ainda.</p>
+      </div>
+    ` : `
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        ${state.creditCards.map(card => {
+          const used = cardUsedLimit(card);
+          const available = cardAvailableLimit(card);
+          const totalLimit = Number(card.total_limit || 0);
+          const usedPct = totalLimit > 0 ? Math.min(100, Math.max(0, (used / totalLimit) * 100)) : 0;
+          const hasActiveExpenses = state.expenses.some(exp => exp.is_credit_card && exp.credit_card_id === card.id && exp.status !== 'paid');
+          return `
+            <div class="paper-card rounded-sm p-6">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <h3 class="font-display text-xl" style="color:var(--ink);">${escapeHtml(card.name)}</h3>
+                  <p class="font-mono text-[11px] mt-1" style="color:#8b8262;">Fecha dia ${card.closing_day} · Vence dia ${card.due_day}</p>
+                </div>
+                <button data-delete-card="${card.id}" class="font-mono text-xs px-2 py-1 rounded-sm hover:bg-[var(--rust-bg)]" style="color:var(--rust);">excluir</button>
+              </div>
+
+              <div class="mt-4">
+                <div class="w-full h-2 rounded-full overflow-hidden" style="background:var(--paper-line);">
+                  <div class="h-full" style="width:${usedPct}%; background:${usedPct > 85 ? 'var(--rust)' : 'var(--brass)'};"></div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-3 gap-3 mt-4">
+                <div>
+                  <p class="font-mono text-[10px] tracking-widest" style="color:#8b8262;">LIMITE TOTAL</p>
+                  <p class="font-mono tabular text-sm font-semibold mt-1" style="color:var(--ink);">${formatBRL(totalLimit)}</p>
+                </div>
+                <div>
+                  <p class="font-mono text-[10px] tracking-widest" style="color:#8b8262;">UTILIZADO</p>
+                  <p class="font-mono tabular text-sm font-semibold mt-1" style="color:var(--rust);">${formatBRL(used)}</p>
+                </div>
+                <div>
+                  <p class="font-mono text-[10px] tracking-widest" style="color:#8b8262;">DISPONÍVEL</p>
+                  <p class="font-mono tabular text-sm font-semibold mt-1" style="color:var(--sage);">${formatBRL(available)}</p>
+                </div>
+              </div>
+              ${hasActiveExpenses ? `<p class="text-[11px] mt-3" style="color:#a8a08a;">Este cartão possui compras/parcelas ativas e não pode ser excluído.</p>` : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `}
+
+    ${renderInvoicePanel()}
+  `;
+}
+
+/**
+ * Renderiza o painel de "Fatura do Mês": seletor de cartão/mês, lista de
+ * lançamentos daquela fatura, subtotal e ações de quitação/antecipação.
+ */
+function renderInvoicePanel(){
+  if(state.creditCards.length === 0) return '';
+
+  const card = findCreditCard(invoiceViewCardId);
+  if(!card) return '';
+
+  const year = invoiceViewYear;
+  const monthIndex = invoiceViewMonthIndex;
+  const status = invoiceStatus(card, year, monthIndex);
+  const items = getInvoiceExpenses(card.id, year, monthIndex).sort((a,b) => (a.due_date||'').localeCompare(b.due_date||''));
+  const totalInvoice = items.reduce((sum, exp) => sum + Number(exp.amount || 0), 0);
+  const totalPending = items.filter(exp => exp.status !== 'paid').reduce((sum, exp) => sum + Number(exp.amount || 0), 0);
+  const monthLabel = new Date(year, monthIndex, 1).toLocaleDateString('pt-BR', { month:'long', year:'numeric' });
+  const isFuture = status === 'future';
+
+  return `
+    <div class="paper-card rounded-sm overflow-hidden mt-8">
+      <div class="px-6 py-5 border-b" style="border-color:var(--paper-line);">
+        <p class="font-mono text-[11px] tracking-widest" style="color:var(--brass);">FATURA DO MÊS</p>
+        <div class="flex items-center justify-between flex-wrap gap-3 mt-1">
+          <h3 class="font-display text-2xl" style="color:var(--ink);">Faturas do Cartão</h3>
+          ${state.creditCards.length > 1 ? `
+            <select id="invoice-card-select" class="rounded-sm px-3 py-2 text-sm">
+              ${state.creditCards.map(c => `<option value="${c.id}" ${c.id===card.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}
+            </select>
+          ` : ''}
+        </div>
+      </div>
+
+      <div class="px-6 py-5 flex items-center justify-between flex-wrap gap-4" style="background:#F1EDE0;">
+        <div class="flex items-center gap-3">
+          <button id="invoice-prev-month" type="button" class="font-mono text-sm px-3 py-1.5 rounded-sm border" style="border-color:var(--paper-line); color:var(--ink-soft);">‹</button>
+          <div class="text-center min-w-[160px]">
+            <p class="font-display text-lg capitalize" style="color:var(--ink);">${monthLabel}</p>
+            <div class="mt-1">${invoiceStatusBadge(status)}</div>
+          </div>
+          <button id="invoice-next-month" type="button" class="font-mono text-sm px-3 py-1.5 rounded-sm border" style="border-color:var(--paper-line); color:var(--ink-soft);">›</button>
+        </div>
+        <div class="text-right">
+          <p class="font-mono text-[11px] tracking-widest" style="color:#8b8262;">SUBTOTAL DA FATURA</p>
+          <p class="font-mono tabular text-2xl font-semibold mt-1" style="color:var(--rust);">${formatBRL(totalInvoice)}</p>
+          ${totalPending !== totalInvoice ? `<p class="text-[11px] font-mono" style="color:var(--sage);">Pendente: ${formatBRL(totalPending)}</p>` : ''}
+        </div>
+        <div>
+          <button id="invoice-pay-btn" type="button"
+            ${totalPending <= 0 ? 'disabled' : ''}
+            class="btn-primary rounded-sm px-5 py-2.5 text-sm font-semibold ${totalPending <= 0 ? 'opacity-40 cursor-not-allowed' : ''}">
+            Pagar Fatura
+          </button>
+        </div>
+      </div>
+
+      ${items.length === 0 ? `
+        <div class="px-6 py-10 text-center">
+          <p class="text-sm" style="color:var(--ink-soft);">Nenhum lançamento nesta fatura.</p>
+        </div>
+      ` : `
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left font-mono text-[11px] tracking-wider" style="color:#8b8262; background:#F1EDE0;">
+                <th class="px-6 py-3 font-medium">Vencimento</th>
+                <th class="px-4 py-3 font-medium">Descrição</th>
+                <th class="px-4 py-3 font-medium">Parcela</th>
+                <th class="px-4 py-3 font-medium text-right">Valor</th>
+                <th class="px-4 py-3 font-medium text-center">Status</th>
+                ${isFuture ? `<th class="px-6 py-3 font-medium text-right">Ações</th>` : ''}
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(exp => `
+                <tr class="row-hover border-t" style="border-color:var(--paper-line);">
+                  <td class="px-6 py-3 font-mono tabular" style="color:var(--ink-soft);">${formatDateBR(exp.due_date)}</td>
+                  <td class="px-4 py-3">
+                    ${escapeHtml(exp.description)}
+                    ${exp.was_anticipated ? `<span class="stamp text-[9px] px-1.5 py-0.5 ml-2" style="color:var(--brass-dark);">antecipada</span>` : ''}
+                  </td>
+                  <td class="px-4 py-3 font-mono text-xs" style="color:var(--ink-soft);">${exp.installment_current}/${exp.installment_total}</td>
+                  <td class="px-4 py-3 text-right font-mono tabular font-semibold" style="color:var(--rust);">${formatBRL(exp.amount)}</td>
+                  <td class="px-4 py-3 text-center">
+                    <span class="stamp text-[10px] px-2 py-0.5" style="${exp.status==='paid' ? 'color:var(--sage);' : 'color:var(--brass-dark);'}">${exp.status==='paid' ? 'PAGO' : 'PENDENTE'}</span>
+                  </td>
+                  ${isFuture ? `
+                    <td class="px-6 py-3 text-right">
+                      <button data-anticipate="${exp.id}" class="font-mono text-xs px-2 py-1 rounded-sm border" style="border-color:var(--brass); color:var(--brass-dark);">antecipar parcela</button>
+                    </td>
+                  ` : ''}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function attachCardsHandlers(){
+  const form = document.getElementById('card-form');
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const name = document.getElementById('card-name').value.trim();
+    const total_limit = parseFloat(document.getElementById('card-limit').value);
+    const closing_day = parseInt(document.getElementById('card-closing-day').value, 10);
+    const due_day = parseInt(document.getElementById('card-due-day').value, 10);
+
+    if(!name || !total_limit || total_limit <= 0){
+      alert('Preencha Nome do Cartão e Limite Total (maior que zero) para continuar.');
+      return;
+    }
+    if(!closing_day || closing_day < 1 || closing_day > 31 || !due_day || due_day < 1 || due_day > 31){
+      alert('Informe Dia de Fechamento e Dia de Vencimento válidos (entre 1 e 31).');
+      return;
+    }
+
+    const newCard = {
+      id: uuid(),
+      name,
+      total_limit,
+      closing_day,
+      due_day
+    };
+
+    state.creditCards.push(newCard);
+    saveState();
+    renderView();
+  });
+
+  document.querySelectorAll('[data-delete-card]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-delete-card');
+      const card = findCreditCard(id);
+      if(!card) return;
+
+      const hasActiveExpenses = state.expenses.some(exp => exp.is_credit_card && exp.credit_card_id === id && exp.status !== 'paid');
+      if(hasActiveExpenses){
+        alert('Não é possível excluir este cartão: existem faturas/compras ativas (não quitadas) vinculadas a ele.');
+        return;
+      }
+
+      if(confirm(`Excluir o cartão "${card.name}"? Esta ação não pode ser desfeita.`)){
+        state.creditCards = state.creditCards.filter(c => c.id !== id);
+        saveState();
+        renderView();
+      }
+    });
+  });
+
+  attachInvoicePanelHandlers();
+}
+
+/**
+ * Liga os eventos do Painel de Fatura: troca de cartão, navegação de
+ * mês/ano, quitação de fatura e antecipação de parcelas futuras.
+ */
+function attachInvoicePanelHandlers(){
+  const cardSelect = document.getElementById('invoice-card-select');
+  if(cardSelect){
+    cardSelect.addEventListener('change', () => {
+      invoiceViewCardId = cardSelect.value;
+      const card = findCreditCard(invoiceViewCardId);
+      const open = openInvoiceOf(card);
+      invoiceViewYear = open.year;
+      invoiceViewMonthIndex = open.monthIndex;
+      renderView();
+    });
+  }
+
+  const prevBtn = document.getElementById('invoice-prev-month');
+  if(prevBtn){
+    prevBtn.addEventListener('click', () => {
+      const d = new Date(invoiceViewYear, invoiceViewMonthIndex - 1, 1);
+      invoiceViewYear = d.getFullYear();
+      invoiceViewMonthIndex = d.getMonth();
+      renderView();
+    });
+  }
+
+  const nextBtn = document.getElementById('invoice-next-month');
+  if(nextBtn){
+    nextBtn.addEventListener('click', () => {
+      const d = new Date(invoiceViewYear, invoiceViewMonthIndex + 1, 1);
+      invoiceViewYear = d.getFullYear();
+      invoiceViewMonthIndex = d.getMonth();
+      renderView();
+    });
+  }
+
+  const payBtn = document.getElementById('invoice-pay-btn');
+  if(payBtn){
+    payBtn.addEventListener('click', () => {
+      payInvoice(invoiceViewCardId, invoiceViewYear, invoiceViewMonthIndex);
+    });
+  }
+
+  document.querySelectorAll('[data-anticipate]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      anticipateInstallment(btn.getAttribute('data-anticipate'));
+    });
+  });
+}
+
+/* =========================================================
+   MÓDULO: RELATÓRIOS (GRÁFICOS E FILTROS)
+   ========================================================= */
+const REPORT_CHART_PALETTE = ['#A97C36','#3F6B57','#9C4A3C','#142032','#8A6528','#6E8FA3','#C9A66B','#5C7D6B','#B5654F','#7A6BA0','#5B7C99','#A88D5C'];
+
+function reportColor(index){
+  return REPORT_CHART_PALETTE[index % REPORT_CHART_PALETTE.length];
+}
+
+/**
+ * Verifica se uma data ISO (YYYY-MM-DD) pertence ao Ano/Mês selecionados
+ * nos filtros do Relatório. 'all' significa "sem restrição" naquele nível.
+ */
+function isInReportRange(isoDate){
+  if(!isoDate) return false;
+  const [y, m] = isoDate.slice(0,7).split('-').map(Number);
+  if(reportFilters.year !== 'all' && y !== Number(reportFilters.year)) return false;
+  if(reportFilters.year !== 'all' && reportFilters.month !== 'all' && (m - 1) !== Number(reportFilters.month)) return false;
+  return true;
+}
+
+function getReportFilteredIncomes(){
+  return state.incomes.filter(inc => isInReportRange(inc.date));
+}
+
+function getReportFilteredExpenses(){
+  return state.expenses.filter(exp => {
+    if(!isInReportRange(exp.due_date)) return false;
+    if(reportFilters.paymentMethod !== 'all' && exp.payment_method !== reportFilters.paymentMethod) return false;
+    if(reportFilters.categoryId !== 'all' && exp.category_id !== reportFilters.categoryId) return false;
+    return true;
+  });
+}
+
+/**
+ * Retorna a chave do "balde" (bucket) temporal de uma data ISO, conforme
+ * o agrupamento escolhido (dia, semana ou mês).
+ */
+function reportBucketKey(isoDate, groupBy){
+  const [y, m, d] = isoDate.split('-').map(Number);
+  if(groupBy === 'day'){
+    return isoDate;
+  }
+  if(groupBy === 'week'){
+    const dt = new Date(y, m - 1, d);
+    const weekday = (dt.getDay() + 6) % 7; // segunda-feira = 0
+    dt.setDate(dt.getDate() - weekday);
+    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  }
+  return isoDate.slice(0,7); // mês: YYYY-MM
+}
+
+function reportBucketLabel(key, groupBy){
+  if(groupBy === 'month'){
+    const [y, m] = key.split('-');
+    const monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return `${monthNames[Number(m)-1]}/${y.slice(2)}`;
+  }
+  const [, m, d] = key.split('-');
+  return groupBy === 'week' ? `sem. ${d}/${m}` : `${d}/${m}`;
+}
+
+/**
+ * Agrupa uma lista de lançamentos (incomes ou expenses) por balde temporal,
+ * somando os valores de cada balde.
+ */
+function computeReportBuckets(items, dateField, groupBy){
+  const map = new Map();
+  items.forEach(item => {
+    const isoDate = item[dateField];
+    if(!isoDate) return;
+    const key = reportBucketKey(isoDate, groupBy);
+    map.set(key, (map.get(key) || 0) + Number(item.amount || 0));
+  });
+  return map;
+}
+
+/**
+ * Lista de anos presentes nos dados (recebimentos + despesas), somado ao
+ * ano corrente, em ordem decrescente — usada para popular o filtro de Ano.
+ */
+function reportAvailableYears(){
+  const years = new Set([new Date().getFullYear()]);
+  state.incomes.forEach(inc => { if(inc.date) years.add(Number(inc.date.slice(0,4))); });
+  state.expenses.forEach(exp => { if(exp.due_date) years.add(Number(exp.due_date.slice(0,4))); });
+  return Array.from(years).sort((a,b) => b - a);
+}
+
+function renderReportsView(){
+  const years = reportAvailableYears();
+  const monthNamesFull = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+  return `
+    <div class="mb-6">
+      <p class="font-mono text-xs tracking-widest" style="color:var(--brass);">MÓDULO 05</p>
+      <h2 class="font-display text-3xl md:text-4xl" style="color:var(--ink);">Relatórios</h2>
+      <p class="text-sm mt-1" style="color:var(--ink-soft);">Analise seus recebimentos e despesas com filtros e gráficos interativos.</p>
+    </div>
+
+    <!-- Filtros -->
+    <div class="paper-card rounded-sm p-6 mb-6">
+      <p class="font-mono text-[11px] tracking-widest mb-3" style="color:var(--brass);">FILTROS</p>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Ano</label>
+          <select id="report-filter-year" class="w-full rounded-sm px-3 py-2 text-sm">
+            <option value="all" ${reportFilters.year==='all'?'selected':''}>Todos</option>
+            ${years.map(y => `<option value="${y}" ${String(y)===reportFilters.year?'selected':''}>${y}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Mês</label>
+          <select id="report-filter-month" ${reportFilters.year==='all'?'disabled':''} class="w-full rounded-sm px-3 py-2 text-sm">
+            <option value="all" ${reportFilters.month==='all'?'selected':''}>Todos</option>
+            ${monthNamesFull.map((name,i) => `<option value="${i}" ${String(i)===reportFilters.month?'selected':''}>${name}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Agrupar por</label>
+          <select id="report-filter-groupby" class="w-full rounded-sm px-3 py-2 text-sm">
+            <option value="month" ${reportFilters.groupBy==='month'?'selected':''}>Mês</option>
+            <option value="week" ${reportFilters.groupBy==='week'?'selected':''}>Semana</option>
+            <option value="day" ${reportFilters.groupBy==='day'?'selected':''}>Dia</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Forma de Pagamento</label>
+          <select id="report-filter-payment" class="w-full rounded-sm px-3 py-2 text-sm">
+            <option value="all" ${reportFilters.paymentMethod==='all'?'selected':''}>Todos</option>
+            ${PAYMENT_METHOD_OPTIONS.map(o => `<option value="${o.value}" ${o.value===reportFilters.paymentMethod?'selected':''}>${o.label}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color:var(--ink-soft);">Categoria</label>
+          <select id="report-filter-category" class="w-full rounded-sm px-3 py-2 text-sm">
+            <option value="all" ${reportFilters.categoryId==='all'?'selected':''}>Todas</option>
+            ${state.categories.map(c => `<option value="${c.id}" ${c.id===reportFilters.categoryId?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div class="paper-card rounded-sm p-6">
+        <h3 class="font-display text-lg mb-3" style="color:var(--ink);">Recebimentos vs. Despesas</h3>
+        <div style="height:280px;"><canvas id="chart-bar-comparison"></canvas></div>
+      </div>
+      <div class="paper-card rounded-sm p-6">
+        <h3 class="font-display text-lg mb-3" style="color:var(--ink);">Gastos por Categoria</h3>
+        <div style="height:280px;"><canvas id="chart-donut-category"></canvas></div>
+      </div>
+      <div class="paper-card rounded-sm p-6">
+        <h3 class="font-display text-lg mb-3" style="color:var(--ink);">Gastos por Forma de Pagamento</h3>
+        <div style="height:280px;"><canvas id="chart-bar-payment"></canvas></div>
+      </div>
+      <div class="paper-card rounded-sm p-6">
+        <h3 class="font-display text-lg mb-3" style="color:var(--ink);">Despesas por Recorrência</h3>
+        <div style="height:280px;"><canvas id="chart-pie-recurrence"></canvas></div>
+      </div>
+    </div>
+
+    ${renderDataManagementSection()}
+  `;
+}
+
+/**
+ * Cria (ou recria, destruindo instâncias anteriores) os 4 gráficos do
+ * painel de Relatórios com base nos filtros ativos.
+ */
+function renderReportCharts(){
+  const filteredIncomes = getReportFilteredIncomes();
+  const filteredExpenses = getReportFilteredExpenses();
+
+  // destrói instâncias anteriores para evitar vazamento de memória / canvas reuse error
+  Object.values(reportChartInstances).forEach(chart => { if(chart) chart.destroy(); });
+
+  const inkColor = '#142032';
+  const gridColor = '#E1DAC4';
+  Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+  Chart.defaults.color = '#3a4a63';
+
+  // Gráfico 1: Recebimentos vs Despesas (barra comparativa)
+  const incMap = computeReportBuckets(filteredIncomes, 'date', reportFilters.groupBy);
+  const expMap = computeReportBuckets(filteredExpenses, 'due_date', reportFilters.groupBy);
+  const allKeys = Array.from(new Set([...incMap.keys(), ...expMap.keys()])).sort();
+  const barCtx = document.getElementById('chart-bar-comparison');
+  if(barCtx){
+    reportChartInstances.bar = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: allKeys.length ? allKeys.map(k => reportBucketLabel(k, reportFilters.groupBy)) : ['Sem dados'],
+        datasets: [
+          { label: 'Recebimentos', data: allKeys.length ? allKeys.map(k => incMap.get(k) || 0) : [0], backgroundColor: '#3F6B57', borderRadius: 3 },
+          { label: 'Despesas', data: allKeys.length ? allKeys.map(k => expMap.get(k) || 0) : [0], backgroundColor: '#9C4A3C', borderRadius: 3 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          x: { grid: { display:false } },
+          y: { grid: { color: gridColor }, ticks: { callback: v => formatBRL(v) } }
+        },
+        plugins: { legend: { position:'bottom' }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${formatBRL(ctx.raw)}` } } }
+      }
+    });
+  }
+
+  // Gráfico 2: Gastos por Categoria (rosca)
+  const catMap = new Map();
+  filteredExpenses.forEach(exp => {
+    const cat = findCategory(exp.category_id);
+    const name = cat ? cat.name : 'Sem categoria';
+    catMap.set(name, (catMap.get(name) || 0) + Number(exp.amount || 0));
+  });
+  const catEntries = Array.from(catMap.entries());
+  const donutCtx = document.getElementById('chart-donut-category');
+  if(donutCtx){
+    reportChartInstances.donut = new Chart(donutCtx, {
+      type: 'doughnut',
+      data: {
+        labels: catEntries.length ? catEntries.map(([name]) => name) : ['Sem dados'],
+        datasets: [{
+          data: catEntries.length ? catEntries.map(([,v]) => v) : [1],
+          backgroundColor: catEntries.length ? catEntries.map((_,i) => reportColor(i)) : ['#E1DAC4']
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position:'bottom', labels: { boxWidth:12, font:{ size:10 } } },
+          tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatBRL(ctx.raw)}` } }
+        }
+      }
+    });
+  }
+
+  // Gráfico 3: Gastos por Forma de Pagamento (barra horizontal)
+  const pmMap = new Map();
+  filteredExpenses.forEach(exp => {
+    const label = paymentMethodLabel(exp.payment_method);
+    pmMap.set(label, (pmMap.get(label) || 0) + Number(exp.amount || 0));
+  });
+  const pmEntries = Array.from(pmMap.entries());
+  const pmCtx = document.getElementById('chart-bar-payment');
+  if(pmCtx){
+    reportChartInstances.paymentBar = new Chart(pmCtx, {
+      type: 'bar',
+      data: {
+        labels: pmEntries.length ? pmEntries.map(([name]) => name) : ['Sem dados'],
+        datasets: [{
+          label: 'Total',
+          data: pmEntries.length ? pmEntries.map(([,v]) => v) : [0],
+          backgroundColor: pmEntries.length ? pmEntries.map((_,i) => reportColor(i)) : ['#E1DAC4'],
+          borderRadius: 3
+        }]
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        scales: {
+          x: { grid: { color: gridColor }, ticks: { callback: v => formatBRL(v) } },
+          y: { grid: { display:false } }
+        },
+        plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => formatBRL(ctx.raw) } } }
+      }
+    });
+  }
+
+  // Gráfico 4: Despesas por Recorrência (pizza)
+  const recMap = new Map();
+  filteredExpenses.forEach(exp => {
+    const label = recurrenceLabel(exp.recurrence);
+    recMap.set(label, (recMap.get(label) || 0) + Number(exp.amount || 0));
+  });
+  const recEntries = Array.from(recMap.entries());
+  const recCtx = document.getElementById('chart-pie-recurrence');
+  if(recCtx){
+    reportChartInstances.recurrencePie = new Chart(recCtx, {
+      type: 'pie',
+      data: {
+        labels: recEntries.length ? recEntries.map(([name]) => name) : ['Sem dados'],
+        datasets: [{
+          data: recEntries.length ? recEntries.map(([,v]) => v) : [1],
+          backgroundColor: recEntries.length ? recEntries.map((_,i) => reportColor(i+3)) : ['#E1DAC4']
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position:'bottom', labels: { boxWidth:12, font:{ size:10 } } },
+          tooltip: { callbacks: { label: ctx => `${ctx.label}: ${formatBRL(ctx.raw)}` } }
+        }
+      }
+    });
+  }
+}
+
+function attachReportsHandlers(){
+  const yearSelect = document.getElementById('report-filter-year');
+  const monthSelect = document.getElementById('report-filter-month');
+  const groupBySelect = document.getElementById('report-filter-groupby');
+  const paymentSelect = document.getElementById('report-filter-payment');
+  const categorySelect = document.getElementById('report-filter-category');
+
+  yearSelect.addEventListener('change', () => {
+    reportFilters.year = yearSelect.value;
+    if(reportFilters.year === 'all') reportFilters.month = 'all';
+    renderView();
+  });
+  monthSelect.addEventListener('change', () => {
+    reportFilters.month = monthSelect.value;
+    renderView();
+  });
+  groupBySelect.addEventListener('change', () => {
+    reportFilters.groupBy = groupBySelect.value;
+    renderView();
+  });
+  paymentSelect.addEventListener('change', () => {
+    reportFilters.paymentMethod = paymentSelect.value;
+    renderView();
+  });
+  categorySelect.addEventListener('change', () => {
+    reportFilters.categoryId = categorySelect.value;
+    renderView();
+  });
+
+  renderReportCharts();
+  attachDataManagementHandlers();
+}
+
+/* =========================================================
+   MÓDULO: GERENCIAMENTO DE DADOS (BACKUP / RESTAURAÇÃO)
+   ========================================================= */
+function renderDataManagementSection(){
+  return `
+    <div class="paper-card rounded-sm p-6">
+      <p class="font-mono text-[11px] tracking-widest mb-1" style="color:var(--brass);">GERENCIAMENTO DE DADOS</p>
+      <h3 class="font-display text-xl mb-1" style="color:var(--ink);">Backup e Restauração</h3>
+      <p class="text-xs mb-4" style="color:var(--ink-soft);">
+        Seus dados ficam salvos apenas neste navegador (localStorage). Exporte um backup regularmente para não perdê-los.
+      </p>
+      <div class="flex flex-wrap gap-3 items-center">
+        <button id="btn-export-backup" type="button" class="btn-primary rounded-sm px-5 py-2.5 text-sm font-semibold">
+          Exportar Backup (JSON)
+        </button>
+        <label class="cursor-pointer">
+          <span class="inline-block rounded-sm px-5 py-2.5 text-sm font-semibold border" style="border-color:var(--brass); color:var(--brass-dark);">
+            Importar Backup (JSON)
+          </span>
+          <input type="file" id="input-import-backup" accept="application/json,.json" class="hidden" />
+        </label>
+        <button id="btn-reset-defaults" type="button" class="rounded-sm px-5 py-2.5 text-sm font-semibold border" style="border-color:var(--rust); color:var(--rust);">
+          Restaurar Padrões de Fábrica
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function exportBackup(){
+  const dataStr = JSON.stringify(state, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `razao-backup-${todayISO()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importBackupFile(file){
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let parsed;
+    try{
+      parsed = JSON.parse(e.target.result);
+    }catch(err){
+      alert('Arquivo inválido: não foi possível interpretar o JSON.');
+      return;
+    }
+    if(!parsed || typeof parsed !== 'object'){
+      alert('Arquivo inválido: formato inesperado.');
+      return;
+    }
+    if(!confirm('Importar este backup substituirá TODOS os dados atuais no sistema. Deseja continuar?')){
+      return;
+    }
+    state = {
+      incomes: Array.isArray(parsed.incomes) ? parsed.incomes : [],
+      expenses: Array.isArray(parsed.expenses) ? parsed.expenses : [],
+      categories: (Array.isArray(parsed.categories) && parsed.categories.length) ? parsed.categories : DEFAULT_CATEGORIES,
+      creditCards: Array.isArray(parsed.creditCards) ? parsed.creditCards : [],
+      budgetTargets: (parsed.budgetTargets && typeof parsed.budgetTargets === 'object') ? parsed.budgetTargets : { essential:50, lifestyle:30, investment:20 }
+    };
+    saveState();
+    invoiceViewCardId = null; invoiceViewYear = null; invoiceViewMonthIndex = null;
+    reportFilters = { year:String(new Date().getFullYear()), month:'all', groupBy:'month', paymentMethod:'all', categoryId:'all' };
+    currentTab = 'dashboard';
+    renderNav();
+    renderView();
+    alert('Backup importado com sucesso.');
+  };
+  reader.onerror = () => alert('Não foi possível ler o arquivo selecionado.');
+  reader.readAsText(file);
+}
+
+function resetFactoryDefaults(){
+  if(!confirm('Isso apagará TODOS os seus dados (recebimentos, despesas, categorias e cartões) permanentemente. Deseja continuar?')) return;
+  if(!confirm('Confirme novamente: restaurar os padrões de fábrica e apagar tudo agora?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = loadState();
+  saveState();
+  invoiceViewCardId = null; invoiceViewYear = null; invoiceViewMonthIndex = null;
+  reportFilters = { year:String(new Date().getFullYear()), month:'all', groupBy:'month', paymentMethod:'all', categoryId:'all' };
+  currentTab = 'dashboard';
+  renderNav();
+  renderView();
+}
+
+function attachDataManagementHandlers(){
+  const exportBtn = document.getElementById('btn-export-backup');
+  if(exportBtn) exportBtn.addEventListener('click', exportBackup);
+
+  const importInput = document.getElementById('input-import-backup');
+  if(importInput){
+    importInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if(file) importBackupFile(file);
+      importInput.value = '';
+    });
+  }
+
+  const resetBtn = document.getElementById('btn-reset-defaults');
+  if(resetBtn) resetBtn.addEventListener('click', resetFactoryDefaults);
+}
+
+/* =========================================================
+   INICIALIZAÇÃO
+   ========================================================= */
+renderNav();
+renderView();
+</script>
+</body>
+</html>

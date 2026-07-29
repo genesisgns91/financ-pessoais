@@ -189,6 +189,7 @@
   .invoice-row.open .chevron{ transform:rotate(180deg);}
   .invoice-body .expense-row{ padding:8px 0;}
   .tag.parcela{ background:var(--violet-dim); color:var(--violet);}
+  .tag.antecipada{ background:var(--blue-dim); color:var(--blue);}
  
   /* forms */
   .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px;}
@@ -564,7 +565,8 @@ function svgIcon(name){
     edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
     trash:'<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
     chevron:'<path d="M6 9l6 6 6-6"/>',
-    x:'<path d="M18 6 6 18M6 6l12 12"/>'
+    x:'<path d="M18 6 6 18M6 6l12 12"/>',
+    fastforward:'<path d="M5 4v16l9-8Z"/><path d="M14 4v16l9-8Z"/>'
   };
   return `<svg class="icon" viewBox="0 0 24 24">${icons[name]||''}</svg>`;
 }
@@ -740,6 +742,9 @@ function renderDespesas(){
   container.querySelectorAll('[data-edit-despesa]').forEach(el=>{
     el.addEventListener('click', (e)=>{ e.stopPropagation(); openDespesaModal(el.dataset.editDespesa); });
   });
+  container.querySelectorAll('[data-antecipar-despesa]').forEach(el=>{
+    el.addEventListener('click', (e)=>{ e.stopPropagation(); openAntecipacaoModal(el.dataset.anteciparDespesa); });
+  });
   container.querySelectorAll('[data-del-despesa]').forEach(el=>{
     el.addEventListener('click', async (e)=>{
       e.stopPropagation();
@@ -812,6 +817,7 @@ function expenseRowHtml(d, isCardItem){
           ${!isCardItem && conta?`<span class="tag">${conta.icone||''} ${conta.nome}</span>`:''}
           ${forma?`<span class="tag">${forma.nome}</span>`:''}
           ${d.parcelamentoId?`<span class="tag parcela">Parcela ${d.parcelaAtual}/${d.parcelaTotal}</span>`:''}
+          ${d.antecipada?`<span class="tag antecipada">Antecipada de ${monthLabel(d.mesOriginal)}</span>`:''}
           ${d.recorrenciaId && d.recorrenciaTipo==='fixo'?`<span class="tag recorrente">Fixo mensal</span>`:''}
           ${d.recorrenciaId && d.recorrenciaTipo==='variavel_mensal'?`<span class="tag ${d.sugerido?'sugestao':'recorrente'}">${d.sugerido?'Sugestão — confira o valor':'Mensal variável'}</span>`:''}
         </div>
@@ -821,6 +827,9 @@ function expenseRowHtml(d, isCardItem){
         ? `<span class="tag" style="align-self:center;">${d.pago?'Na fatura paga':'Na fatura'}</span>`
         : `<button class="status-btn ${d.pago?'pago':'pendente'}" data-toggle-status="${d.id}">${d.pago?'Pago':'Pendente'}</button>`}
       <div class="exp-actions">
+        ${d.parcelamentoId && monthOrder(d.mes) > monthOrder(todayKey())
+          ? `<button class="btn btn-icon" data-antecipar-despesa="${d.id}" title="Antecipar parcela" style="color:var(--blue);">${svgIcon('fastforward')}</button>`
+          : ''}
         <button class="btn btn-icon" data-edit-despesa="${d.id}">${svgIcon('edit')}</button>
         <button class="btn btn-icon" data-del-despesa="${d.id}" style="color:var(--rose);">${svgIcon('trash')}</button>
       </div>
@@ -1508,6 +1517,56 @@ function openDespesaModal(id, defaultMes){
   });
 }
  
+/* ---------- ANTECIPAÇÃO DE PARCELAS ---------- */
+async function anteciparParcela(despesaId, mesDestino){
+  const d = byId(state.despesas, despesaId);
+  if(!d) return;
+  const mesOriginal = d.mesOriginal || d.mes;
+  await updateDoc(doc(db,'despesas', d.id), {
+    mes: mesDestino,
+    mesOriginal,
+    antecipada: true,
+  });
+}
+
+function openAntecipacaoModal(despesaId){
+  const d = byId(state.despesas, despesaId);
+  if(!d) return;
+  const mesAtual = todayKey();
+  const opcoes = getMonthsList().filter(m => monthOrder(m) >= monthOrder(mesAtual) && monthOrder(m) < monthOrder(d.mes));
+  if(opcoes.length===0){
+    toast('Não há meses disponíveis para antecipar esta parcela.');
+    return;
+  }
+  const cartao = d.cartaoId ? byId(state.cartoes, d.cartaoId) : null;
+  openModal(`
+    <div class="modal-head"><h3>Antecipar parcela</h3>
+      <button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
+    <div class="pagar-com-note" style="display:block; margin-bottom:14px;">
+      A parcela <strong>${d.parcelaAtual}/${d.parcelaTotal}</strong> de "<strong>${d.descricao}</strong>" (${fmt(d.valor)}) está agendada para <strong>${monthLabel(d.mes)}</strong>${cartao?` na fatura do ${cartao.nome}`:''}.
+      Escolha para qual mês deseja antecipar essa cobrança. O número da parcela (${d.parcelaAtual}/${d.parcelaTotal}) e o histórico da compra são mantidos.
+    </div>
+    <div class="field full"><label>Antecipar para</label>
+      <select id="fMesDestino">${opcoes.map(m=>`<option value="${m}" ${m===mesAtual?'selected':''}>${monthLabel(m)}</option>`).join('')}</select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="mCancel">Cancelar</button>
+      <button class="btn btn-primary" id="mConfirm">Antecipar parcela</button>
+    </div>
+  `);
+  document.getElementById('mClose').addEventListener('click', closeModal);
+  document.getElementById('mCancel').addEventListener('click', closeModal);
+  document.getElementById('mConfirm').addEventListener('click', async ()=>{
+    const mesDestino = document.getElementById('fMesDestino').value;
+    if(!mesDestino){ toast('Selecione um mês.'); return; }
+    if(confirm(`Antecipar a parcela ${d.parcelaAtual}/${d.parcelaTotal} de ${monthLabel(d.mes)} para ${monthLabel(mesDestino)}?`)){
+      await anteciparParcela(d.id, mesDestino);
+      closeModal();
+      toast(`Parcela antecipada para ${monthLabel(mesDestino)}.`);
+    }
+  });
+}
+
 function openReceitaModal(id){
   const r = id ? byId(state.receitas, id) : null;
   openModal(`

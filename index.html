@@ -141,7 +141,7 @@
   .ring-wrap .ring-bg{ stroke:var(--bg-elevated-2); }
   .ring-wrap .ring-fg{ stroke:var(--emerald); stroke-linecap:round; transition:stroke-dashoffset .4s; }
   .month-info{ flex:1; min-width:160px;}
-  .month-info .name{ font-family:'Sora',sans-serif; font-weight:700; font-size:15.5px; text-transform:capitalize;}
+  .month-info .name{ font-family:'Sora',sans-serif; font-weight:700; font-size:15.5px; text-transform:capitalize; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
   .month-info .sub{ font-size:12px; color:var(--text-muted); margin-top:2px;}
   .month-stats{ display:flex; gap:22px; flex-wrap:wrap; }
   .stat{ text-align:right; min-width:70px;}
@@ -149,7 +149,18 @@
   .stat .v{ font-family:'JetBrains Mono',monospace; font-weight:600; font-size:14px; margin-top:1px;}
   .stat .v.pago{ color:var(--emerald);}
   .stat .v.pendente{ color:var(--amber);}
-  .chevron{ transition:transform .25s; color:var(--text-muted); }
+  .chevron{ transition:transform .25s; color:var(--text-muted); flex-shrink:0;}
+
+  /* Mês atual — destaque visual */
+  .badge-atual{
+    font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+    padding:2px 9px; border-radius:100px; background:var(--emerald); color:#08120e; white-space:nowrap;
+  }
+  .month-card.is-current-month{
+    border-color:var(--emerald);
+    box-shadow:0 0 0 1px var(--emerald), 0 8px 24px rgba(47,224,168,.12);
+  }
+  .month-card.is-current-month .month-head{ background:linear-gradient(90deg, var(--emerald-dim), transparent 55%); }
   .month-card.open .chevron{ transform:rotate(180deg); }
   .month-body{ display:none; border-top:1px solid var(--border-soft); padding:14px 18px 18px;}
   .month-card.open .month-body{ display:block;}
@@ -252,6 +263,30 @@
   @media(max-width:640px){
     .form-grid{ grid-template-columns:1fr;}
     .exp-tags{ display:none;}
+
+    /* expense-row: quebra em 2 linhas para não encavalar texto/valores */
+    .expense-row{ flex-wrap:wrap; row-gap:8px; padding:11px 0; }
+    .expense-row::after{ content:""; order:3; flex-basis:100%; height:0;}
+    .expense-row .icon-badge{ order:1; width:30px; height:30px; font-size:14px;}
+    .expense-row .exp-main{ order:2; flex:1 1 auto; min-width:0;}
+    .expense-row .exp-main .desc{ font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .expense-row .exp-val{ order:4; min-width:0; margin-left:calc(30px + 12px);}
+    .expense-row .status-btn{ order:5; margin-left:8px;}
+    .expense-row .exp-val + .tag{ order:5; margin-left:8px; align-self:center;}
+    .expense-row .exp-actions{ order:6; margin-left:auto;}
+
+    .invoice-body{ padding-left:14px;}
+    .invoice-body .expense-row .exp-val{ margin-left:calc(30px + 12px);}
+
+    /* invoice-head (linha da fatura do cartão): mesma lógica de quebra */
+    .invoice-head{ flex-wrap:wrap; row-gap:8px; padding:11px 12px; }
+    .invoice-head::after{ content:""; order:3; flex-basis:100%; height:0;}
+    .invoice-head .icon-badge{ order:1; width:30px; height:30px; font-size:14px;}
+    .invoice-head .exp-main{ order:2; flex:1 1 auto; min-width:0;}
+    .invoice-head .exp-main .desc{ font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .invoice-head .exp-val{ order:4; margin-left:calc(30px + 12px);}
+    .invoice-head .status-btn{ order:5; margin-left:8px;}
+    .invoice-head .chevron{ order:6; margin-left:auto;}
   }
  
   /* ---------- Modo app: telas de celular ---------- */
@@ -286,8 +321,19 @@
  
     .card, .month-card, .account-card, .invoice-row{ border-radius:14px; }
     .accounts-grid{ grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); }
-    .month-stats{ gap:10px; }
-    .stat{ min-width:auto; }
+
+    /* month-head: ring+nome+chevron na linha 1, stats em linha própria */
+    .month-head{ padding:14px; gap:10px; flex-wrap:wrap; }
+    .ring-wrap{ width:40px; height:40px; }
+    .ring-wrap svg{ width:40px; height:40px; }
+    .month-info{ min-width:0; }
+    .month-info .name{ font-size:14.5px; }
+    .month-head::after{ content:""; order:3; flex-basis:100%; height:0; }
+    .month-stats{
+      order:4; flex:1 1 100%; justify-content:space-between; gap:8px;
+      margin-top:2px; padding-left:calc(40px + 10px);
+    }
+    .stat{ text-align:left; min-width:auto; }
  
     /* modal vira bottom sheet */
     .modal-overlay{ align-items:flex-end; padding:0; }
@@ -641,8 +687,9 @@ function renderDespesas(){
     const cartaoIdsNoMes = [...new Set(despesasMes.filter(d=>d.cartaoId).map(d=>d.cartaoId))];
     const rows = soltas.map(d=>expenseRowHtml(d)).join('') +
       cartaoIdsNoMes.map(cid=>invoiceRowHtml(cid, mes)).join('');
+    const isCurrent = mes===todayKey();
     return `
-    <div class="month-card ${isOpen?'open':''}" data-mes="${mes}">
+    <div class="month-card ${isOpen?'open':''} ${isCurrent?'is-current-month':''}" data-mes="${mes}">
       <div class="month-head" data-toggle="${mes}">
         <div class="ring-wrap">
           <svg viewBox="0 0 48 48">
@@ -652,7 +699,7 @@ function renderDespesas(){
           </svg>
         </div>
         <div class="month-info">
-          <div class="name">${monthLabel(mes)}</div>
+          <div class="name">${monthLabel(mes)}${isCurrent?'<span class="badge-atual">Mês atual</span>':''}</div>
           <div class="sub">${despesasMes.length} despesa${despesasMes.length!==1?'s':''}</div>
         </div>
         <div class="month-stats">

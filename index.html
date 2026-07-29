@@ -410,10 +410,16 @@
     </div>
     <div class="row-between" style="margin-bottom:14px;">
       <div style="color:var(--text-muted); font-size:13px;">Próximos 12 meses + histórico retroativo</div>
-      <button class="btn btn-ghost btn-sm" id="btnAddMesRetro">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>
-        Adicionar mês retroativo
-      </button>
+      <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+        <label class="check-row" style="font-size:12.5px; color:var(--text-secondary); font-weight:600; cursor:pointer;">
+          <input type="checkbox" id="chkOcultarRetroativos">
+          Ocultar meses retroativos
+        </label>
+        <button class="btn btn-ghost btn-sm" id="btnAddMesRetro">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>
+          Adicionar mês retroativo
+        </button>
+      </div>
     </div>
     <div id="mesesContainer"></div>
   </section>
@@ -579,6 +585,7 @@ const state = {
 };
 const openMonths = new Set();
 const openInvoices = new Set();
+let ocultarRetroativos = localStorage.getItem('cofre_ocultarRetroativos') === '1';
 let seeded = false;
 function genId(){ return 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,9); }
 function round2(n){ return Math.round(n*100)/100; }
@@ -751,7 +758,13 @@ function renderSaldoTotal(){
 function renderDespesas(){
   renderClassesResumo();
   const container = document.getElementById('mesesContainer');
-  const months = getMonthsList();
+  const chkRetro = document.getElementById('chkOcultarRetroativos');
+  if(chkRetro) chkRetro.checked = ocultarRetroativos;
+  let months = getMonthsList();
+  if(ocultarRetroativos){
+    const hojeOrd = monthOrder(todayKey());
+    months = months.filter(m=>monthOrder(m) >= hojeOrd);
+  }
   container.innerHTML = months.map(mes=>{
     const despesasMes = state.despesas.filter(d=>d.mes===mes);
     const total = despesasMes.reduce((s,d)=>s+Number(d.valor||0),0);
@@ -2089,6 +2102,11 @@ document.querySelectorAll('.tab-nav-sm button').forEach(btn=>{
   });
 });
 document.getElementById('btnAddMesRetro').addEventListener('click', openMesRetroModal);
+document.getElementById('chkOcultarRetroativos').addEventListener('change', (e)=>{
+  ocultarRetroativos = e.target.checked;
+  localStorage.setItem('cofre_ocultarRetroativos', ocultarRetroativos ? '1' : '0');
+  renderDespesas();
+});
 document.getElementById('btnNovaReceita').addEventListener('click', ()=>openReceitaModal(null));
 document.getElementById('btnNovaConta').addEventListener('click', ()=>openContaModal(null));
 document.getElementById('btnNovoCartao').addEventListener('click', ()=>openCartaoModal(null));

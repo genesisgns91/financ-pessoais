@@ -1351,8 +1351,40 @@ function openDespesaModal(id, defaultMes){
     if(!base.descricao || !valorInformado || !mesInicial){ toast('Preencha descrição, valor e mês.'); return; }
 
     if(d){
-      await updateDoc(doc(db,'despesas', id), { ...base, valor: valorInformado, mes: mesInicial, pago });
-      closeModal(); toast('Despesa salva.'); return;
+      const camposComuns = {
+        descricao: base.descricao, categoriaId: base.categoriaId, subcategoria: base.subcategoria,
+        tipoId: base.tipoId, classeId: base.classeId, contaId: base.contaId, cartaoId: base.cartaoId,
+        formaPagamentoId: base.formaPagamentoId, vencimento: base.vencimento, valor: valorInformado,
+      };
+
+      if(d.parcelamentoId){
+        const aplicarTodas = confirm('Esta despesa faz parte de uma compra parcelada.\n\nOK = aplicar esta alteração em TODAS as parcelas desta compra\nCancelar = aplicar somente nesta parcela');
+        if(aplicarTodas){
+          const serie = state.despesas.filter(x=>x.parcelamentoId===d.parcelamentoId);
+          await Promise.all(serie.map(item=>updateDoc(doc(db,'despesas', item.id), {
+            ...camposComuns,
+            descricao: `${base.descricao} (${item.parcelaAtual}/${item.parcelaTotal})`,
+          })));
+          toast(`Alteração aplicada em ${serie.length} parcelas.`);
+        } else {
+          await updateDoc(doc(db,'despesas', id), { ...camposComuns, mes: mesInicial, pago });
+          toast('Despesa salva.');
+        }
+      } else if(d.recorrenciaId){
+        const aplicarFuturas = confirm('Esta despesa faz parte de uma recorrência mensal.\n\nOK = aplicar esta alteração neste mês e em todos os futuros da mesma recorrência\nCancelar = aplicar somente neste mês');
+        if(aplicarFuturas){
+          const serie = state.despesas.filter(x=>x.recorrenciaId===d.recorrenciaId && monthOrder(x.mes)>=monthOrder(d.mes));
+          await Promise.all(serie.map(item=>updateDoc(doc(db,'despesas', item.id), camposComuns)));
+          toast(`Alteração aplicada em ${serie.length} lançamento${serie.length!==1?'s':''}.`);
+        } else {
+          await updateDoc(doc(db,'despesas', id), { ...camposComuns, mes: mesInicial, pago });
+          toast('Despesa salva.');
+        }
+      } else {
+        await updateDoc(doc(db,'despesas', id), { ...base, valor: valorInformado, mes: mesInicial, pago });
+        toast('Despesa salva.');
+      }
+      closeModal(); return;
     }
 
     const hoje = todayKey();

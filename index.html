@@ -220,6 +220,16 @@
   .bar-fill{ height:100%; border-radius:100px; transition:width .5s ease;}
   .bar-target{ position:absolute; top:-3px; width:2px; height:15px; background:var(--text-primary); border-radius:2px;}
 
+  .limit-bar-track{ position:relative; height:8px; background:var(--bg-elevated-2); border-radius:100px; overflow:hidden; margin:8px 0 4px;}
+  .limit-bar-fill{ height:100%; border-radius:100px; transition:width .4s ease; background:var(--violet);}
+  .limit-bar-fill.warn{ background:var(--amber);}
+  .limit-bar-fill.over{ background:var(--rose);}
+  .limit-row{ display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);}
+  .upcoming-mini{ margin-top:12px; padding-top:10px; border-top:1px solid var(--border-soft);}
+  .upcoming-mini .row{ display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-secondary); padding:3px 0;}
+  .pagar-com-note{ font-size:11.5px; color:var(--text-muted); margin:-4px 0 2px; padding:8px 10px; background:var(--bg-elevated); border-radius:8px; display:none;}
+  .parcela-preview{ font-size:12px; color:var(--emerald); margin-top:6px;}
+
   .accounts-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
   .account-card{ background:var(--bg-surface); border:1px solid var(--border-soft); border-radius:var(--radius); padding:18px;}
   .account-card .top{ display:flex; align-items:center; gap:10px; margin-bottom:14px;}
@@ -367,10 +377,10 @@
   <!-- CARTÕES -->
   <section class="view" id="view-cartoes">
     <div class="row-between" style="margin-bottom:14px;">
-      <div style="color:var(--text-muted); font-size:13px;">Cartões de crédito — pagar a fatura quita todas as compras dela</div>
+      <div style="color:var(--text-muted); font-size:13px;">Cartões de crédito — controle limite, fatura e parcelas</div>
       <button class="btn btn-primary btn-sm" id="btnNovoCartao">
         <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-        Novo cartão
+        Novo cartão de crédito
       </button>
     </div>
     <div class="accounts-grid" id="cartoesContainer"></div>
@@ -583,6 +593,9 @@ function saldoConta(contaId){
 }
 function faturaTotal(cartaoId, mes){
   return state.despesas.filter(d=>d.cartaoId===cartaoId && d.mes===mes).reduce((s,d)=>s+Number(d.valor||0),0);
+}
+function limiteUsadoCartao(cartaoId){
+  return state.despesas.filter(d=>d.cartaoId===cartaoId && !d.pago).reduce((s,d)=>s+Number(d.valor||0),0);
 }
 function renderSaldoTotal(){
   const total = state.contas.reduce((s,c)=>s+saldoConta(c.id),0);
@@ -890,25 +903,51 @@ function renderCartoes(){
   const mesAtual = todayKey();
   container.innerHTML = state.cartoes.map(c=>{
     const contaVinculada = byId(state.contas, c.contaId);
-    const total = faturaTotal(c.id, mesAtual);
+    const totalMesAtual = faturaTotal(c.id, mesAtual);
+    const limite = Number(c.limite||0);
+    const usado = limiteUsadoCartao(c.id);
+    const disponivel = limite - usado;
+    const pct = limite>0 ? Math.min((usado/limite)*100, 100) : 0;
+    const barClass = limite>0 ? (usado>limite ? 'over' : (pct>=80 ? 'warn':'')) : '';
+    const proximosMeses = getMonthsList()
+      .filter(m=>monthOrder(m)>=monthOrder(mesAtual))
+      .map(m=>({m, total:faturaTotal(c.id,m)}))
+      .filter(x=>x.total>0)
+      .slice(0,5);
     return `
     <div class="account-card">
       <div class="top">
         <div class="icon-badge" style="background:${(c.cor||'#b98cff')+'22'}">${c.icone||'💳'}</div>
         <div class="name">${c.nome}</div>
       </div>
-      <div class="saldo mono" style="color:var(--rose)">${fmt(total)}</div>
+      <div class="saldo mono" style="color:var(--rose)">${fmt(totalMesAtual)}</div>
       <div style="color:var(--text-muted); font-size:11.5px; margin-top:4px;">Fatura do mês atual</div>
-      <div style="color:var(--text-muted); font-size:11.5px; margin-top:8px;">
+
+      ${limite>0 ? `
+        <div class="limit-bar-track"><div class="limit-bar-fill ${barClass}" style="width:${pct}%"></div></div>
+        <div class="limit-row"><span>Usado: ${fmt(usado)}</span><span>${disponivel>=0?'Disponível':'Excedido'}: ${fmt(Math.abs(disponivel))}</span></div>
+        <div class="limit-row"><span>Limite total</span><span>${fmt(limite)}</span></div>
+      ` : `
+        <div class="limit-row" style="margin-top:8px;"><span>Dívida em aberto</span><span class="mono">${fmt(usado)}</span></div>
+      `}
+
+      <div style="color:var(--text-muted); font-size:11.5px; margin-top:10px;">
         ${contaVinculada?`Débito em: ${contaVinculada.icone||''} ${contaVinculada.nome}<br>`:''}
         ${c.diaFechamento?`Fecha dia ${c.diaFechamento} · `:''}${c.diaVencimento?`Vence dia ${c.diaVencimento}`:''}
       </div>
+
+      ${proximosMeses.length ? `
+        <div class="upcoming-mini">
+          ${proximosMeses.map(x=>`<div class="row"><span>${monthLabel(x.m)}</span><span class="mono">${fmt(x.total)}</span></div>`).join('')}
+        </div>
+      `:''}
+
       <div class="foot">
         <button class="btn btn-ghost btn-sm" data-edit-cartao="${c.id}">${svgIcon('edit')} Editar</button>
         <button class="btn btn-danger-outline btn-sm" data-del-cartao="${c.id}">${svgIcon('trash')}</button>
       </div>
     </div>`;
-  }).join('') || '<div class="empty-msg">Nenhum cartão cadastrado ainda.</div>';
+  }).join('') || '<div class="empty-msg">Nenhum cartão de crédito cadastrado ainda.</div>';
 
   container.querySelectorAll('[data-edit-cartao]').forEach(el=>{
     el.addEventListener('click', ()=>openCartaoModal(el.dataset.editCartao));
@@ -927,12 +966,13 @@ function openCartaoModal(id){
   const c = id ? byId(state.cartoes, id) : null;
   const emojis = ['💳','🟣','🔵','⚫','🟠','🔴','🟡'];
   openModal(`
-    <div class="modal-head"><h3>${c?'Editar cartão':'Novo cartão'}</h3>
+    <div class="modal-head"><h3>${c?'Editar cartão de crédito':'Novo cartão de crédito'}</h3>
       <button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
     <div class="form-grid">
       <div class="field full"><label>Nome</label><input id="fNome" value="${c?c.nome:''}" placeholder="Ex: Nubank Ultravioleta"></div>
       <div class="field"><label>Ícone</label><select id="fIcone">${emojis.map(e=>`<option ${c&&c.icone===e?'selected':''}>${e}</option>`).join('')}</select></div>
       <div class="field"><label>Cor</label><input id="fCor" type="color" value="${c?c.cor:'#b98cff'}"></div>
+      <div class="field full"><label>Limite total (R$)</label><input id="fLimite" type="number" step="0.01" min="0" value="${c?(c.limite||''):''}" placeholder="Ex: 5000 (deixe em branco se não quiser controlar)"></div>
       <div class="field full"><label>Conta de onde sai o pagamento da fatura</label><select id="fConta">${optionsHtml(state.contas, c?c.contaId:null)}</select></div>
       <div class="field"><label>Dia de fechamento</label><input id="fFechamento" type="number" min="1" max="31" value="${c?(c.diaFechamento||''):''}" placeholder="Ex: 25"></div>
       <div class="field"><label>Dia de vencimento</label><input id="fVencimento" type="number" min="1" max="31" value="${c?(c.diaVencimento||''):''}" placeholder="Ex: 5"></div>
@@ -955,6 +995,7 @@ function openCartaoModal(id){
       nome,
       icone: document.getElementById('fIcone').value,
       cor: document.getElementById('fCor').value,
+      limite: Number(document.getElementById('fLimite').value)||0,
       contaId: document.getElementById('fConta').value || null,
       diaFechamento: Number(document.getElementById('fFechamento').value)||null,
       diaVencimento: Number(document.getElementById('fVencimento').value)||null,
@@ -1075,7 +1116,7 @@ function openDespesaModal(id, defaultMes){
   const pagarComVal = d ? (d.cartaoId ? 'cartao:'+d.cartaoId : (d.contaId ? 'conta:'+d.contaId : '')) : '';
   const pagarComOptions = `
     <option value="">Selecione…</option>
-    ${state.contas.length?`<optgroup label="Contas">${state.contas.map(c=>`<option value="conta:${c.id}" ${pagarComVal==='conta:'+c.id?'selected':''}>${c.icone||''} ${c.nome}</option>`).join('')}</optgroup>`:''}
+    ${state.contas.length?`<optgroup label="Contas (débito/pix/dinheiro)">${state.contas.map(c=>`<option value="conta:${c.id}" ${pagarComVal==='conta:'+c.id?'selected':''}>${c.icone||''} ${c.nome}</option>`).join('')}</optgroup>`:''}
     ${state.cartoes.length?`<optgroup label="Cartões de crédito">${state.cartoes.map(c=>`<option value="cartao:${c.id}" ${pagarComVal==='cartao:'+c.id?'selected':''}>${c.icone||'💳'} ${c.nome}</option>`).join('')}</optgroup>`:''}
   `;
   openModal(`
@@ -1090,13 +1131,21 @@ function openDespesaModal(id, defaultMes){
       <div class="field"><label>Tipo</label><select id="fTipo">${optionsHtml(state.tipos, d?d.tipoId:null)}</select></div>
       <div class="field"><label>Classe</label><select id="fClasse">${optionsHtml(state.classes, d?d.classeId:null)}</select></div>
       <div class="field full"><label>Pagar com</label><select id="fPagarCom">${pagarComOptions}</select></div>
+      <div class="field full"><div class="pagar-com-note" id="pagarComNote"></div></div>
       <div class="field"><label>Forma de pagamento</label><select id="fForma">${optionsHtml(state.formas, d?d.formaPagamentoId:null)}</select></div>
       <div class="field"><label>Dia de vencimento</label><input id="fVenc" type="number" min="1" max="31" value="${d?(d.vencimento||''):''}" placeholder="Ex: 10"></div>
       <div class="field full" style="display:flex; align-items:center; gap:16px;">
         <div class="check-row"><input type="checkbox" id="fPago" ${d&&d.pago?'checked':''}><label style="margin:0;" for="fPago">Já foi pago</label></div>
-        ${d?'':`<div class="check-row"><input type="checkbox" id="fParcelada"><label style="margin:0;" for="fParcelada">Compra parcelada</label></div>`}
       </div>
-      ${d?'':`<div class="field full" id="parcelasWrap" style="display:none;"><label>Número de parcelas</label><input id="fParcelas" type="number" min="2" max="60" value="2"></div>`}
+      ${d?'':`
+      <div class="field full" id="parceladaWrap" style="display:none;">
+        <div class="check-row" style="margin-bottom:10px;"><input type="checkbox" id="fParcelada"><label style="margin:0;" for="fParcelada">Compra parcelada no cartão</label></div>
+        <div id="parcelasWrap" style="display:none;">
+          <label>Número de parcelas</label>
+          <input id="fParcelas" type="number" min="2" max="60" value="2">
+          <div class="parcela-preview" id="parcelaPreview"></div>
+        </div>
+      </div>`}
     </div>
     <div class="modal-actions">
       ${d?`<button class="btn btn-danger-outline" id="mDelete">Excluir</button>`:''}
@@ -1113,13 +1162,53 @@ function openDespesaModal(id, defaultMes){
   document.getElementById('fCat').addEventListener('change', updateSubList);
   document.getElementById('mClose').addEventListener('click', closeModal);
   document.getElementById('mCancel').addEventListener('click', closeModal);
+
+  const parceladaWrap = document.getElementById('parceladaWrap');
   const parceladaEl = document.getElementById('fParcelada');
+  const parcelasWrap = document.getElementById('parcelasWrap');
+  const pagarComEl = document.getElementById('fPagarCom');
+  const noteEl = document.getElementById('pagarComNote');
+
+  function isCartaoSelected(){ return pagarComEl.value.startsWith('cartao:'); }
+
+  function updatePagarComUI(){
+    const ehCartao = isCartaoSelected();
+    if(ehCartao){
+      const cartaoId = pagarComEl.value.split(':')[1];
+      const cartao = byId(state.cartoes, cartaoId);
+      noteEl.style.display = 'block';
+      noteEl.innerHTML = `💳 Despesa no crédito — entrará na fatura de <strong>${cartao?cartao.nome:'cartão'}</strong>. Pagando a fatura, quita tudo o que estiver nela.`;
+      if(parceladaWrap) parceladaWrap.style.display = 'block';
+    } else {
+      noteEl.style.display = 'none';
+      if(parceladaWrap){
+        parceladaWrap.style.display = 'none';
+        if(parceladaEl){ parceladaEl.checked = false; }
+        if(parcelasWrap) parcelasWrap.style.display = 'none';
+        document.getElementById('lblValor').textContent = 'Valor (R$)';
+      }
+    }
+  }
+  function updateParcelaPreview(){
+    if(!parceladaEl || !parceladaEl.checked) return;
+    const total = Number(document.getElementById('fValor').value)||0;
+    const n = Math.max(2, Number(document.getElementById('fParcelas').value)||2);
+    const preview = document.getElementById('parcelaPreview');
+    if(preview) preview.textContent = total>0 ? `${n}x de ${fmt(round2(total/n))}` : '';
+  }
+  pagarComEl.addEventListener('change', updatePagarComUI);
+  updatePagarComUI();
+
   if(parceladaEl){
     parceladaEl.addEventListener('change', ()=>{
-      document.getElementById('parcelasWrap').style.display = parceladaEl.checked ? 'block' : 'none';
+      parcelasWrap.style.display = parceladaEl.checked ? 'block' : 'none';
       document.getElementById('lblValor').textContent = parceladaEl.checked ? 'Valor total da compra (R$)' : 'Valor (R$)';
+      updateParcelaPreview();
     });
+    document.getElementById('fValor').addEventListener('input', updateParcelaPreview);
+    document.getElementById('fParcelas').addEventListener('input', updateParcelaPreview);
   }
+
   if(d) document.getElementById('mDelete').addEventListener('click', async ()=>{
     if(confirm('Excluir esta despesa?')){ await deleteDoc(doc(db,'despesas', id)); closeModal(); }
   });
@@ -1147,7 +1236,7 @@ function openDespesaModal(id, defaultMes){
       closeModal(); toast('Despesa salva.'); return;
     }
 
-    const parcelada = parceladaEl && parceladaEl.checked;
+    const parcelada = pagarTipo==='cartao' && parceladaEl && parceladaEl.checked;
     const numParcelas = parcelada ? Math.max(2, Number(document.getElementById('fParcelas').value)||2) : 1;
 
     if(!parcelada){

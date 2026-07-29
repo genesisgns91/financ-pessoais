@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="Cofre">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2310121b'/%3E%3Ccircle cx='50' cy='50' r='34' fill='none' stroke='%232fe0a8' stroke-width='9'/%3E%3Cpath d='M50 16 A34 34 0 0 1 82 55' fill='none' stroke='%23ff6b81' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="manifest" href='data:application/manifest+json,{"name":"Cofre%20-%20Controle%20Financeiro","short_name":"Cofre","display":"standalone","start_url":".","background_color":"%2310121b","theme_color":"%2310121b"}'>
-<title>COFRE — Controle Financeiro Pessoal</title>
+<title>Cofre — Controle Financeiro Pessoal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -229,6 +229,11 @@
   .upcoming-mini .row{ display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-secondary); padding:3px 0;}
   .pagar-com-note{ font-size:11.5px; color:var(--text-muted); margin:-4px 0 2px; padding:8px 10px; background:var(--bg-elevated); border-radius:8px; display:none;}
   .parcela-preview{ font-size:12px; color:var(--emerald); margin-top:6px;}
+  .segmented{ display:flex; background:var(--bg-base); border:1px solid var(--border); border-radius:10px; padding:3px; gap:3px;}
+  .seg-btn{ all:unset; cursor:pointer; flex:1; text-align:center; padding:8px 10px; border-radius:7px; font-size:13px; font-weight:600; color:var(--text-secondary);}
+  .seg-btn.active{ background:var(--bg-elevated-2); color:var(--emerald); box-shadow:inset 0 0 0 1px var(--border);}
+  .tag.recorrente{ background:var(--blue-dim); color:var(--blue);}
+  .tag.sugestao{ background:var(--amber-dim); color:var(--amber);}
 
   .accounts-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
   .account-card{ background:var(--bg-surface); border:1px solid var(--border-soft); border-radius:var(--radius); padding:18px;}
@@ -455,6 +460,14 @@ const openInvoices = new Set();
 let seeded = false;
 function genId(){ return 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,9); }
 function round2(n){ return Math.round(n*100)/100; }
+const RECORRENCIA_LABELS = { fixo:'Mensal fixo', variavel_mensal:'Mensal variável', ocasional:'Ocasional', variavel:'Variável' };
+const RECORRENCIA_HELP = {
+  fixo: 'Mesmo valor todo mês — ao lançar, preenche automaticamente os próximos meses com o mesmo valor.',
+  variavel_mensal: 'Ocorre todo mês mas o valor muda — os próximos meses vêm pré-preenchidos com o último valor lançado, só confirme ou ajuste.',
+  ocasional: 'Compra pontual — não se repete nos próximos meses.',
+  variavel: 'Pode ou não ocorrer — não preenche os próximos meses automaticamente.',
+};
+const MESES_AUTOFILL = 24;
 
 /* ---------- helpers ---------- */
 const BRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
@@ -538,7 +551,13 @@ async function seedIfEmpty(){
       for(const c of defaults) await addDoc(catCol, c);
     }
     if(state.tipos.length===0){
-      for(const nome of ['Fixa','Variável','Mensal']) await addDoc(collection(db,'tipos'), {nome});
+      const tiposDefault = [
+        {nome:'Fixa', recorrencia:'fixo'},
+        {nome:'Mensal variável', recorrencia:'variavel_mensal'},
+        {nome:'Ocasional', recorrencia:'ocasional'},
+        {nome:'Variável', recorrencia:'variavel'},
+      ];
+      for(const t of tiposDefault) await addDoc(collection(db,'tipos'), t);
     }
     if(state.classes.length===0){
       const defaults = [
@@ -690,6 +709,18 @@ function renderDespesas(){
           await deleteDoc(doc(db,'despesas', d.id));
           toast('Parcela excluída.');
         }
+      } else if(d && d.recorrenciaId){
+        const futuras = confirm('Esta despesa faz parte de uma recorrência mensal.\n\nOK = excluir este mês e todos os futuros iguais\nCancelar = excluir só este mês');
+        if(futuras){
+          const serie = state.despesas.filter(x=>x.recorrenciaId===d.recorrenciaId && monthOrder(x.mes)>=monthOrder(d.mes));
+          if(confirm(`Excluir ${serie.length} lançamento${serie.length!==1?'s':''} (este mês e os futuros)?`)){
+            for(const item of serie) await deleteDoc(doc(db,'despesas', item.id));
+            toast('Recorrência futura excluída.');
+          }
+        } else if(confirm('Excluir apenas este mês?')){
+          await deleteDoc(doc(db,'despesas', d.id));
+          toast('Despesa excluída.');
+        }
       } else if(confirm('Excluir esta despesa?')){
         await deleteDoc(doc(db,'despesas', el.dataset.delDespesa));
         toast('Despesa excluída.');
@@ -734,6 +765,8 @@ function expenseRowHtml(d, isCardItem){
           ${!isCardItem && conta?`<span class="tag">${conta.icone||''} ${conta.nome}</span>`:''}
           ${forma?`<span class="tag">${forma.nome}</span>`:''}
           ${d.parcelamentoId?`<span class="tag parcela">Parcela ${d.parcelaAtual}/${d.parcelaTotal}</span>`:''}
+          ${d.recorrenciaId && d.recorrenciaTipo==='fixo'?`<span class="tag recorrente">Fixo mensal</span>`:''}
+          ${d.recorrenciaId && d.recorrenciaTipo==='variavel_mensal'?`<span class="tag ${d.sugerido?'sugestao':'recorrente'}">${d.sugerido?'Sugestão — confira o valor':'Mensal variável'}</span>`:''}
         </div>
       </div>
       <div class="exp-val">${fmt(d.valor)}</div>
@@ -1053,14 +1086,55 @@ function renderConfigTipos(){
   const container = document.getElementById('tiposList');
   container.innerHTML = state.tipos.map(t=>`
     <div class="cfg-item"><div class="cfg-item-head">
-      <div class="name">${t.nome}</div>
+      <div class="name">${t.nome} <span class="mono" style="color:var(--text-muted); font-weight:400; font-size:11px;">— ${RECORRENCIA_LABELS[t.recorrencia]||'Variável'}</span></div>
       <button class="btn btn-icon" data-edit-tipo="${t.id}">${svgIcon('edit')}</button>
       <button class="btn btn-icon" data-del-tipo="${t.id}" style="color:var(--rose);">${svgIcon('trash')}</button>
-    </div></div>`).join('') || '<div class="empty-msg">Nenhum tipo cadastrado.</div>';
-  container.querySelectorAll('[data-edit-tipo]').forEach(el=>el.addEventListener('click',()=>openSimpleModal('tipos', el.dataset.editTipo, 'Tipo')));
+    </div>
+    <div style="font-size:11.5px; color:var(--text-muted); margin-top:6px;">${RECORRENCIA_HELP[t.recorrencia]||RECORRENCIA_HELP.variavel}</div>
+    </div>`).join('') || '<div class="empty-msg">Nenhum tipo cadastrado.</div>';
+  container.querySelectorAll('[data-edit-tipo]').forEach(el=>el.addEventListener('click',()=>openTipoModal(el.dataset.editTipo)));
   container.querySelectorAll('[data-del-tipo]').forEach(el=>el.addEventListener('click', async ()=>{
     if(confirm('Excluir este tipo?')) await deleteDoc(doc(db,'tipos', el.dataset.delTipo));
   }));
+}
+
+function openTipoModal(id){
+  const t = id ? byId(state.tipos, id) : null;
+  const opcoes = [
+    ['fixo','Mensal fixo'],['variavel_mensal','Mensal variável'],['ocasional','Ocasional'],['variavel','Variável'],
+  ];
+  openModal(`
+    <div class="modal-head"><h3>${t?'Editar tipo':'Novo tipo'}</h3>
+      <button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
+    <div class="field full" style="margin-bottom:12px;"><label>Nome</label><input id="fNome" value="${t?t.nome:''}" placeholder="Ex: Fixa"></div>
+    <div class="field full"><label>Padrão de recorrência</label>
+      <select id="fRecorrencia">${opcoes.map(([v,l])=>`<option value="${v}" ${t&&t.recorrencia===v?'selected':''}>${l}</option>`).join('')}</select>
+    </div>
+    <div class="pagar-com-note" style="display:block; margin-top:10px;" id="tipoHelp"></div>
+    <div class="modal-actions">
+      ${t?`<button class="btn btn-danger-outline" id="mDelete">Excluir</button>`:''}
+      <button class="btn btn-ghost" id="mCancel">Cancelar</button>
+      <button class="btn btn-primary" id="mSave">Salvar</button>
+    </div>
+  `);
+  const recSel = document.getElementById('fRecorrencia');
+  const help = document.getElementById('tipoHelp');
+  function updateHelp(){ help.textContent = RECORRENCIA_HELP[recSel.value]; }
+  updateHelp();
+  recSel.addEventListener('change', updateHelp);
+  document.getElementById('mClose').addEventListener('click', closeModal);
+  document.getElementById('mCancel').addEventListener('click', closeModal);
+  if(t) document.getElementById('mDelete').addEventListener('click', async ()=>{
+    if(confirm('Excluir este tipo?')){ await deleteDoc(doc(db,'tipos', id)); closeModal(); }
+  });
+  document.getElementById('mSave').addEventListener('click', async ()=>{
+    const nome = document.getElementById('fNome').value.trim();
+    if(!nome){ toast('Informe o nome.'); return; }
+    const payload = { nome, recorrencia: recSel.value };
+    if(t) await updateDoc(doc(db,'tipos', id), payload);
+    else await addDoc(collection(db,'tipos'), payload);
+    closeModal(); toast('Tipo salvo.');
+  });
 }
 
 function renderConfigClasses(){
@@ -1124,28 +1198,49 @@ function openDespesaModal(id, defaultMes){
       <button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
     <div class="form-grid">
       <div class="field full"><label>Descrição</label><input id="fDesc" value="${d?d.descricao:''}" placeholder="Ex: Conta de luz"></div>
+
+      ${d?'':`
+      <div class="field full">
+        <label>É parcelado ou à vista?</label>
+        <div class="segmented" id="fModo">
+          <button type="button" class="seg-btn active" data-modo="avista">À vista</button>
+          <button type="button" class="seg-btn" data-modo="parcelado">Parcelado</button>
+        </div>
+      </div>`}
+
       <div class="field"><label id="lblValor">Valor (R$)</label><input id="fValor" type="number" step="0.01" value="${d?d.valor:''}" placeholder="0,00"></div>
-      <div class="field"><label>Mês${d?'':' inicial'}</label><select id="fMes">${monthOptionsHtml(mes)}</select></div>
+      <div class="field"><label id="lblMes">Mês</label><input id="fMes" type="month" value="${mes}"></div>
+
+      ${d?'':`
+      <div class="field full" id="parcelaCamposWrap" style="display:none;">
+        <div class="form-grid">
+          <div class="field"><label>Total de parcelas</label><input id="fTotalParcelas" type="number" min="1" max="120" value="12"></div>
+          <div class="field"><label>Qual parcela é essa?</label><input id="fParcelaAtual" type="number" min="1" max="120" value="1"></div>
+        </div>
+        <div class="parcela-preview" id="parcelaResumo"></div>
+      </div>`}
+
       <div class="field"><label>Categoria</label><select id="fCat">${optionsHtml(state.categorias, d?d.categoriaId:(cat?cat.id:null))}</select></div>
       <div class="field"><label>Subcategoria</label><input id="fSub" list="subList" value="${d?(d.subcategoria||''):''}" placeholder="Selecione ou digite"><datalist id="subList"></datalist></div>
       <div class="field"><label>Tipo</label><select id="fTipo">${optionsHtml(state.tipos, d?d.tipoId:null)}</select></div>
       <div class="field"><label>Classe</label><select id="fClasse">${optionsHtml(state.classes, d?d.classeId:null)}</select></div>
+
+      ${d?'':`
+      <div class="field full" id="tipoRecorrenciaWrap" style="display:none;">
+        <div class="pagar-com-note" id="tipoRecorrenciaNote" style="display:block;"></div>
+        <div class="check-row" style="margin-top:8px;" id="tipoRecorrenciaCheckWrap">
+          <input type="checkbox" id="fRepetirAuto" checked>
+          <label style="margin:0;" for="fRepetirAuto">Preencher automaticamente os próximos meses</label>
+        </div>
+      </div>`}
+
       <div class="field full"><label>Pagar com</label><select id="fPagarCom">${pagarComOptions}</select></div>
       <div class="field full"><div class="pagar-com-note" id="pagarComNote"></div></div>
       <div class="field"><label>Forma de pagamento</label><select id="fForma">${optionsHtml(state.formas, d?d.formaPagamentoId:null)}</select></div>
       <div class="field"><label>Dia de vencimento</label><input id="fVenc" type="number" min="1" max="31" value="${d?(d.vencimento||''):''}" placeholder="Ex: 10"></div>
       <div class="field full" style="display:flex; align-items:center; gap:16px;">
-        <div class="check-row"><input type="checkbox" id="fPago" ${d&&d.pago?'checked':''}><label style="margin:0;" for="fPago">Já foi pago</label></div>
+        <div class="check-row"><input type="checkbox" id="fPago" ${d&&d.pago?'checked':''}><label style="margin:0;" for="fPago">Já foi pago (neste mês)</label></div>
       </div>
-      ${d?'':`
-      <div class="field full" id="parceladaWrap" style="display:none;">
-        <div class="check-row" style="margin-bottom:10px;"><input type="checkbox" id="fParcelada"><label style="margin:0;" for="fParcelada">Compra parcelada no cartão</label></div>
-        <div id="parcelasWrap" style="display:none;">
-          <label>Número de parcelas</label>
-          <input id="fParcelas" type="number" min="2" max="60" value="2">
-          <div class="parcela-preview" id="parcelaPreview"></div>
-        </div>
-      </div>`}
     </div>
     <div class="modal-actions">
       ${d?`<button class="btn btn-danger-outline" id="mDelete">Excluir</button>`:''}
@@ -1163,51 +1258,75 @@ function openDespesaModal(id, defaultMes){
   document.getElementById('mClose').addEventListener('click', closeModal);
   document.getElementById('mCancel').addEventListener('click', closeModal);
 
-  const parceladaWrap = document.getElementById('parceladaWrap');
-  const parceladaEl = document.getElementById('fParcelada');
-  const parcelasWrap = document.getElementById('parcelasWrap');
   const pagarComEl = document.getElementById('fPagarCom');
   const noteEl = document.getElementById('pagarComNote');
-
-  function isCartaoSelected(){ return pagarComEl.value.startsWith('cartao:'); }
+  const modoWrap = document.getElementById('fModo');
+  const parcelaCamposWrap = document.getElementById('parcelaCamposWrap');
+  const tipoWrap = document.getElementById('tipoRecorrenciaWrap');
+  const tipoNote = document.getElementById('tipoRecorrenciaNote');
+  const tipoSel = document.getElementById('fTipo');
+  let modo = 'avista';
 
   function updatePagarComUI(){
-    const ehCartao = isCartaoSelected();
+    const ehCartao = pagarComEl.value.startsWith('cartao:');
     if(ehCartao){
-      const cartaoId = pagarComEl.value.split(':')[1];
-      const cartao = byId(state.cartoes, cartaoId);
+      const cartao = byId(state.cartoes, pagarComEl.value.split(':')[1]);
       noteEl.style.display = 'block';
       noteEl.innerHTML = `💳 Despesa no crédito — entrará na fatura de <strong>${cartao?cartao.nome:'cartão'}</strong>. Pagando a fatura, quita tudo o que estiver nela.`;
-      if(parceladaWrap) parceladaWrap.style.display = 'block';
     } else {
       noteEl.style.display = 'none';
-      if(parceladaWrap){
-        parceladaWrap.style.display = 'none';
-        if(parceladaEl){ parceladaEl.checked = false; }
-        if(parcelasWrap) parcelasWrap.style.display = 'none';
-        document.getElementById('lblValor').textContent = 'Valor (R$)';
-      }
     }
-  }
-  function updateParcelaPreview(){
-    if(!parceladaEl || !parceladaEl.checked) return;
-    const total = Number(document.getElementById('fValor').value)||0;
-    const n = Math.max(2, Number(document.getElementById('fParcelas').value)||2);
-    const preview = document.getElementById('parcelaPreview');
-    if(preview) preview.textContent = total>0 ? `${n}x de ${fmt(round2(total/n))}` : '';
   }
   pagarComEl.addEventListener('change', updatePagarComUI);
   updatePagarComUI();
 
-  if(parceladaEl){
-    parceladaEl.addEventListener('change', ()=>{
-      parcelasWrap.style.display = parceladaEl.checked ? 'block' : 'none';
-      document.getElementById('lblValor').textContent = parceladaEl.checked ? 'Valor total da compra (R$)' : 'Valor (R$)';
-      updateParcelaPreview();
-    });
-    document.getElementById('fValor').addEventListener('input', updateParcelaPreview);
-    document.getElementById('fParcelas').addEventListener('input', updateParcelaPreview);
+  function updateParcelaResumo(){
+    const resumo = document.getElementById('parcelaResumo');
+    if(!resumo) return;
+    const total = Math.max(1, Number(document.getElementById('fTotalParcelas').value)||1);
+    const atual = Math.max(1, Number(document.getElementById('fParcelaAtual').value)||1);
+    const restantes = Math.max(1, total - atual + 1);
+    const mesInicio = document.getElementById('fMes').value;
+    const mesFim = mesInicio ? addMonths(mesInicio, restantes-1) : '';
+    resumo.textContent = mesInicio
+      ? `Serão lançadas ${restantes} parcela${restantes!==1?'s':''} (${atual}/${total} até ${total}/${total}), de ${monthLabel(mesInicio)} até ${monthLabel(mesFim)}.`
+      : '';
   }
+
+  function updateTipoRecorrenciaUI(){
+    if(!tipoWrap) return;
+    if(modo==='parcelado'){ tipoWrap.style.display='none'; return; }
+    const tipo = byId(state.tipos, tipoSel.value);
+    const rec = tipo ? tipo.recorrencia : null;
+    if(rec==='fixo' || rec==='variavel_mensal'){
+      tipoWrap.style.display = 'block';
+      tipoNote.innerHTML = rec==='fixo'
+        ? `🔁 Tipo <strong>${tipo.nome}</strong> é mensal fixo — o mesmo valor será lançado automaticamente nos próximos meses.`
+        : `🔁 Tipo <strong>${tipo.nome}</strong> ocorre todo mês com valor variável — os próximos meses vêm com este valor como sugestão, é só confirmar ou ajustar depois.`;
+    } else {
+      tipoWrap.style.display = 'none';
+    }
+  }
+
+  if(modoWrap){
+    modoWrap.querySelectorAll('.seg-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        modoWrap.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        modo = btn.dataset.modo;
+        const parcelado = modo==='parcelado';
+        parcelaCamposWrap.style.display = parcelado ? 'block' : 'none';
+        document.getElementById('lblValor').textContent = parcelado ? 'Valor de cada parcela (R$)' : 'Valor (R$)';
+        document.getElementById('lblMes').textContent = parcelado ? 'Mês desta parcela' : 'Mês';
+        if(parcelado) updateParcelaResumo();
+        updateTipoRecorrenciaUI();
+      });
+    });
+    document.getElementById('fTotalParcelas').addEventListener('input', updateParcelaResumo);
+    document.getElementById('fParcelaAtual').addEventListener('input', updateParcelaResumo);
+    document.getElementById('fMes').addEventListener('change', updateParcelaResumo);
+  }
+  if(tipoSel){ tipoSel.addEventListener('change', updateTipoRecorrenciaUI); updateTipoRecorrenciaUI(); }
 
   if(d) document.getElementById('mDelete').addEventListener('click', async ()=>{
     if(confirm('Excluir esta despesa?')){ await deleteDoc(doc(db,'despesas', id)); closeModal(); }
@@ -1229,35 +1348,61 @@ function openDespesaModal(id, defaultMes){
     const valorInformado = Number(document.getElementById('fValor').value)||0;
     const mesInicial = document.getElementById('fMes').value;
     const pago = document.getElementById('fPago').checked;
-    if(!base.descricao || !valorInformado){ toast('Preencha descrição e valor.'); return; }
+    if(!base.descricao || !valorInformado || !mesInicial){ toast('Preencha descrição, valor e mês.'); return; }
 
     if(d){
       await updateDoc(doc(db,'despesas', id), { ...base, valor: valorInformado, mes: mesInicial, pago });
       closeModal(); toast('Despesa salva.'); return;
     }
 
-    const parcelada = pagarTipo==='cartao' && parceladaEl && parceladaEl.checked;
-    const numParcelas = parcelada ? Math.max(2, Number(document.getElementById('fParcelas').value)||2) : 1;
+    const hoje = todayKey();
+    const dentroDoPassado = (m)=> monthOrder(m) < monthOrder(hoje);
+    const statusPara = (m)=> dentroDoPassado(m) ? true : (m===hoje ? pago : false);
 
-    if(!parcelada){
-      await addDoc(collection(db,'despesas'), { ...base, valor: valorInformado, mes: mesInicial, pago });
-    } else {
+    if(modo==='parcelado'){
+      const totalParcelas = Math.max(1, Number(document.getElementById('fTotalParcelas').value)||1);
+      const parcelaAtualNum = Math.max(1, Math.min(totalParcelas, Number(document.getElementById('fParcelaAtual').value)||1));
+      const restantes = totalParcelas - parcelaAtualNum + 1;
       const parcelamentoId = genId();
-      const valorParcela = round2(valorInformado / numParcelas);
-      const diferenca = round2(valorInformado - valorParcela*numParcelas);
       const criacoes = [];
-      for(let i=0;i<numParcelas;i++){
-        const valorEssaParcela = i===numParcelas-1 ? round2(valorParcela+diferenca) : valorParcela;
+      for(let i=0;i<restantes;i++){
+        const m = addMonths(mesInicial, i);
+        const numero = parcelaAtualNum + i;
         criacoes.push(addDoc(collection(db,'despesas'), {
           ...base,
-          descricao: `${base.descricao} (${i+1}/${numParcelas})`,
-          valor: valorEssaParcela,
-          mes: addMonths(mesInicial, i),
-          pago: i===0 ? pago : false,
-          parcelamentoId, parcelaAtual: i+1, parcelaTotal: numParcelas,
+          descricao: `${base.descricao} (${numero}/${totalParcelas})`,
+          valor: valorInformado,
+          mes: m,
+          pago: statusPara(m),
+          parcelamentoId, parcelaAtual: numero, parcelaTotal: totalParcelas,
         }));
       }
       await Promise.all(criacoes);
+    } else {
+      const tipo = byId(state.tipos, base.tipoId);
+      const rec = tipo ? tipo.recorrencia : null;
+      const repetirAuto = document.getElementById('fRepetirAuto');
+      const deveRepetir = (rec==='fixo' || rec==='variavel_mensal') && repetirAuto && repetirAuto.checked;
+
+      if(!deveRepetir){
+        await addDoc(collection(db,'despesas'), { ...base, valor: valorInformado, mes: mesInicial, pago });
+      } else {
+        const recorrenciaId = genId();
+        const criacoes = [];
+        for(let i=0;i<MESES_AUTOFILL;i++){
+          const m = addMonths(mesInicial, i);
+          criacoes.push(addDoc(collection(db,'despesas'), {
+            ...base,
+            valor: valorInformado,
+            mes: m,
+            pago: statusPara(m),
+            recorrenciaId,
+            recorrenciaTipo: rec,
+            sugerido: rec==='variavel_mensal' && i>0,
+          }));
+        }
+        await Promise.all(criacoes);
+      }
     }
     closeModal(); toast('Despesa salva.');
   });
@@ -1485,7 +1630,7 @@ document.getElementById('btnNovaReceita').addEventListener('click', ()=>openRece
 document.getElementById('btnNovaConta').addEventListener('click', ()=>openContaModal(null));
 document.getElementById('btnNovoCartao').addEventListener('click', ()=>openCartaoModal(null));
 document.getElementById('btnNovaCategoria').addEventListener('click', ()=>openCategoriaModal(null));
-document.getElementById('btnNovoTipo').addEventListener('click', ()=>openSimpleModal('tipos', null, 'Tipo'));
+document.getElementById('btnNovoTipo').addEventListener('click', ()=>openTipoModal(null));
 document.getElementById('btnNovaClasse').addEventListener('click', ()=>openClasseModal(null));
 document.getElementById('btnNovaForma').addEventListener('click', ()=>openSimpleModal('formasPagamento', null, 'Forma de pagamento'));
 

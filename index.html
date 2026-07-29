@@ -827,7 +827,7 @@ function expenseRowHtml(d, isCardItem){
         ? `<span class="tag" style="align-self:center;">${d.pago?'Na fatura paga':'Na fatura'}</span>`
         : `<button class="status-btn ${d.pago?'pago':'pendente'}" data-toggle-status="${d.id}">${d.pago?'Pago':'Pendente'}</button>`}
       <div class="exp-actions">
-        ${d.parcelamentoId && monthOrder(d.mes) > monthOrder(todayKey())
+        ${d.parcelamentoId && d.parcelaAtual > 1
           ? `<button class="btn btn-icon" data-antecipar-despesa="${d.id}" title="Antecipar parcela" style="color:var(--blue);">${svgIcon('fastforward')}</button>`
           : ''}
         <button class="btn btn-icon" data-edit-despesa="${d.id}">${svgIcon('edit')}</button>
@@ -1533,21 +1533,24 @@ function openAntecipacaoModal(despesaId){
   const d = byId(state.despesas, despesaId);
   if(!d) return;
   const mesAtual = todayKey();
-  const opcoes = getMonthsList().filter(m => monthOrder(m) >= monthOrder(mesAtual) && monthOrder(m) < monthOrder(d.mes));
+  // Qualquer mês anterior ao mês atual da parcela serve como destino — inclusive meses
+  // passados/retroativos, já que o preenchimento de despesas nem sempre acompanha o mês corrente.
+  const opcoes = getMonthsList().filter(m => monthOrder(m) < monthOrder(d.mes));
   if(opcoes.length===0){
     toast('Não há meses disponíveis para antecipar esta parcela.');
     return;
   }
+  const mesPadrao = opcoes.includes(mesAtual) ? mesAtual : opcoes[opcoes.length-1];
   const cartao = d.cartaoId ? byId(state.cartoes, d.cartaoId) : null;
   openModal(`
     <div class="modal-head"><h3>Antecipar parcela</h3>
       <button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
     <div class="pagar-com-note" style="display:block; margin-bottom:14px;">
       A parcela <strong>${d.parcelaAtual}/${d.parcelaTotal}</strong> de "<strong>${d.descricao}</strong>" (${fmt(d.valor)}) está agendada para <strong>${monthLabel(d.mes)}</strong>${cartao?` na fatura do ${cartao.nome}`:''}.
-      Escolha para qual mês deseja antecipar essa cobrança. O número da parcela (${d.parcelaAtual}/${d.parcelaTotal}) e o histórico da compra são mantidos.
+      Escolha para qual mês deseja antecipar essa cobrança — pode ser qualquer mês anterior, inclusive meses retroativos. O número da parcela (${d.parcelaAtual}/${d.parcelaTotal}) e o histórico da compra são mantidos.
     </div>
     <div class="field full"><label>Antecipar para</label>
-      <select id="fMesDestino">${opcoes.map(m=>`<option value="${m}" ${m===mesAtual?'selected':''}>${monthLabel(m)}</option>`).join('')}</select>
+      <select id="fMesDestino">${opcoes.map(m=>`<option value="${m}" ${m===mesPadrao?'selected':''}>${monthLabel(m)}</option>`).join('')}</select>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="mCancel">Cancelar</button>

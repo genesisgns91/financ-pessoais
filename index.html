@@ -1324,7 +1324,28 @@ function openDespesaModal(id, defaultMes){
       noteEl.style.display = 'none';
     }
   }
-  pagarComEl.addEventListener('change', updatePagarComUI);
+  function normalizeStr(s){ return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+  function encontrarFormaCredito(){
+    return state.formas.find(f=>normalizeStr(f.nome).includes('credito'));
+  }
+  function autoFillCartaoCampos(){
+    if(!pagarComEl.value.startsWith('cartao:')) return;
+    const cartao = byId(state.cartoes, pagarComEl.value.split(':')[1]);
+    if(!cartao) return;
+    // Vencimento automático conforme o dia de vencimento do cartão
+    if(cartao.diaVencimento){
+      document.getElementById('fVenc').value = cartao.diaVencimento;
+    }
+    // Forma de pagamento automática para "Crédito"
+    const formaCredito = encontrarFormaCredito();
+    if(formaCredito){
+      document.getElementById('fForma').value = formaCredito.id;
+    }
+  }
+  pagarComEl.addEventListener('change', ()=>{
+    updatePagarComUI();
+    autoFillCartaoCampos();
+  });
   updatePagarComUI();
  
   function updateParcelaResumo(){

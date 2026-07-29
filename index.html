@@ -138,6 +138,17 @@
   .status-btn{ all:unset; cursor:pointer; font-size:10.5px; font-weight:700; padding:4px 10px; border-radius:100px; text-transform:uppercase; letter-spacing:.03em;}
   .status-btn.pago{ background:var(--emerald-dim); color:var(--emerald);}
   .status-btn.pendente{ background:var(--amber-dim); color:var(--amber);}
+  .status-btn[disabled]{ cursor:default; opacity:.55;}
+
+  .invoice-row{ border:1px solid var(--border-soft); border-radius:12px; margin-bottom:8px; overflow:hidden; background:var(--bg-elevated);}
+  .invoice-head{ display:flex; align-items:center; gap:12px; padding:11px 12px; cursor:pointer; }
+  .invoice-head:hover{ background:#262b40; }
+  .invoice-head .exp-main .desc{ font-size:13.5px;}
+  .invoice-body{ display:none; padding:4px 14px 10px 58px; border-top:1px solid var(--border-soft);}
+  .invoice-row.open .invoice-body{ display:block;}
+  .invoice-row.open .chevron{ transform:rotate(180deg);}
+  .invoice-body .expense-row{ padding:8px 0;}
+  .tag.parcela{ background:var(--violet-dim); color:var(--violet);}
 
   /* forms */
   .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px;}
@@ -222,6 +233,7 @@
     <button data-tab="despesas" class="active">Despesas</button>
     <button data-tab="receitas">Receitas</button>
     <button data-tab="contas">Contas</button>
+    <button data-tab="cartoes">Cartões</button>
     <button data-tab="config">Configurações</button>
   </nav>
 
@@ -263,6 +275,18 @@
       </button>
     </div>
     <div class="accounts-grid" id="contasContainer"></div>
+  </section>
+
+  <!-- CARTÕES -->
+  <section class="view" id="view-cartoes">
+    <div class="row-between" style="margin-bottom:14px;">
+      <div style="color:var(--text-muted); font-size:13px;">Cartões de crédito — pagar a fatura quita todas as compras dela</div>
+      <button class="btn btn-primary btn-sm" id="btnNovoCartao">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Novo cartão
+      </button>
+    </div>
+    <div class="accounts-grid" id="cartoesContainer"></div>
   </section>
 
   <!-- CONFIG -->
@@ -322,11 +346,14 @@ const db = getFirestore(app);
 
 /* ---------- estado em memória ---------- */
 const state = {
-  categorias: [], tipos: [], classes: [], contas: [], formas: [],
+  categorias: [], tipos: [], classes: [], contas: [], formas: [], cartoes: [],
   despesas: [], receitas: [], config: { mesesRetroativos: [] }
 };
 const openMonths = new Set();
+const openInvoices = new Set();
 let seeded = false;
+function genId(){ return 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,9); }
+function round2(n){ return Math.round(n*100)/100; }
 
 /* ---------- helpers ---------- */
 const BRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
@@ -446,8 +473,9 @@ listen('categorias','categorias', ()=>{ renderDespesas(); renderConfigCategorias
 listen('tipos','tipos', ()=>{ renderDespesas(); renderConfigTipos(); });
 listen('classes','classes', ()=>{ renderDespesas(); renderConfigClasses(); });
 listen('formasPagamento','formas', ()=>{ renderDespesas(); renderConfigFormas(); });
-listen('contas','contas', ()=>{ renderContas(); renderDespesas(); renderReceitas(); renderSaldoTotal(); });
-listen('despesas','despesas', ()=>{ renderDespesas(); renderContas(); renderSaldoTotal(); });
+listen('contas','contas', ()=>{ renderContas(); renderDespesas(); renderReceitas(); renderSaldoTotal(); renderCartoes(); });
+listen('cartoes','cartoes', ()=>{ renderDespesas(); renderContas(); renderCartoes(); renderSaldoTotal(); });
+listen('despesas','despesas', ()=>{ renderDespesas(); renderContas(); renderSaldoTotal(); renderCartoes(); });
 listen('receitas','receitas', ()=>{ renderReceitas(); renderContas(); renderSaldoTotal(); });
 
 seedIfEmpty();
@@ -457,8 +485,13 @@ function saldoConta(contaId){
   const conta = byId(state.contas, contaId);
   if(!conta) return 0;
   const receitasConta = state.receitas.filter(r=>r.contaId===contaId).reduce((s,r)=>s+Number(r.valor||0),0);
-  const despesasPagas = state.despesas.filter(d=>d.contaId===contaId && d.pago).reduce((s,d)=>s+Number(d.valor||0),0);
-  return Number(conta.saldoInicial||0) + receitasConta - despesasPagas;
+  const despesasPagas = state.despesas.filter(d=>!d.cartaoId && d.contaId===contaId && d.pago).reduce((s,d)=>s+Number(d.valor||0),0);
+  const cartoesDaConta = state.cartoes.filter(c=>c.contaId===contaId).map(c=>c.id);
+  const faturasPagas = state.despesas.filter(d=>d.cartaoId && cartoesDaConta.includes(d.cartaoId) && d.pago).reduce((s,d)=>s+Number(d.valor||0),0);
+  return Number(conta.saldoInicial||0) + receitasConta - despesasPagas - faturasPagas;
+}
+function faturaTotal(cartaoId, mes){
+  return state.despesas.filter(d=>d.cartaoId===cartaoId && d.mes===mes).reduce((s,d)=>s+Number(d.valor||0),0);
 }
 function renderSaldoTotal(){
   const total = state.contas.reduce((s,c)=>s+saldoConta(c.id),0);
@@ -481,7 +514,10 @@ function renderDespesas(){
     const r = 20, circ = 2*Math.PI*r;
     const offset = circ - (pct/100)*circ;
     const isOpen = openMonths.has(mes);
-    const rows = despesasMes.slice().sort((a,b)=>(a.vencimento||0)-(b.vencimento||0)).map(d=>expenseRowHtml(d)).join('');
+    const soltas = despesasMes.filter(d=>!d.cartaoId).slice().sort((a,b)=>(a.vencimento||0)-(b.vencimento||0));
+    const cartaoIdsNoMes = [...new Set(despesasMes.filter(d=>d.cartaoId).map(d=>d.cartaoId))];
+    const rows = soltas.map(d=>expenseRowHtml(d)).join('') +
+      cartaoIdsNoMes.map(cid=>invoiceRowHtml(cid, mes)).join('');
     return `
     <div class="month-card ${isOpen?'open':''}" data-mes="${mes}">
       <div class="month-head" data-toggle="${mes}">
@@ -537,15 +573,46 @@ function renderDespesas(){
   container.querySelectorAll('[data-del-despesa]').forEach(el=>{
     el.addEventListener('click', async (e)=>{
       e.stopPropagation();
-      if(confirm('Excluir esta despesa?')){
+      const d = byId(state.despesas, el.dataset.delDespesa);
+      if(d && d.parcelamentoId){
+        const todas = confirm('Esta despesa faz parte de uma compra parcelada.\n\nOK = excluir TODAS as parcelas\nCancelar = excluir só esta parcela');
+        if(todas){
+          const serie = state.despesas.filter(x=>x.parcelamentoId===d.parcelamentoId);
+          if(confirm(`Excluir as ${serie.length} parcelas desta compra?`)){
+            for(const item of serie) await deleteDoc(doc(db,'despesas', item.id));
+            toast('Parcelas excluídas.');
+          }
+        } else if(confirm('Excluir apenas esta parcela?')){
+          await deleteDoc(doc(db,'despesas', d.id));
+          toast('Parcela excluída.');
+        }
+      } else if(confirm('Excluir esta despesa?')){
         await deleteDoc(doc(db,'despesas', el.dataset.delDespesa));
         toast('Despesa excluída.');
       }
     });
   });
+  container.querySelectorAll('[data-toggle-invoice]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const key = el.dataset.toggleInvoice;
+      if(openInvoices.has(key)) openInvoices.delete(key); else openInvoices.add(key);
+      renderDespesas();
+    });
+  });
+  container.querySelectorAll('[data-toggle-invoice-status]').forEach(el=>{
+    el.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      const [mes, cartaoId] = el.dataset.toggleInvoiceStatus.split('|');
+      const itens = state.despesas.filter(d=>d.cartaoId===cartaoId && d.mes===mes);
+      const todasPagas = itens.length>0 && itens.every(d=>d.pago);
+      const novoStatus = !todasPagas;
+      await Promise.all(itens.map(d=>updateDoc(doc(db,'despesas', d.id), { pago: novoStatus })));
+      toast(novoStatus ? 'Fatura marcada como paga.' : 'Fatura marcada como pendente.');
+    });
+  });
 }
 
-function expenseRowHtml(d){
+function expenseRowHtml(d, isCardItem){
   const cat = byId(state.categorias, d.categoriaId);
   const tipo = byId(state.tipos, d.tipoId);
   const classe = byId(state.classes, d.classeId);
@@ -560,15 +627,45 @@ function expenseRowHtml(d){
           ${cat?`<span class="tag">${cat.nome}${d.subcategoria?' • '+d.subcategoria:''}</span>`:''}
           ${tipo?`<span class="tag">${tipo.nome}</span>`:''}
           ${classe?`<span class="tag">${classe.nome}</span>`:''}
-          ${conta?`<span class="tag">${conta.icone||''} ${conta.nome}</span>`:''}
+          ${!isCardItem && conta?`<span class="tag">${conta.icone||''} ${conta.nome}</span>`:''}
           ${forma?`<span class="tag">${forma.nome}</span>`:''}
+          ${d.parcelamentoId?`<span class="tag parcela">Parcela ${d.parcelaAtual}/${d.parcelaTotal}</span>`:''}
         </div>
       </div>
       <div class="exp-val">${fmt(d.valor)}</div>
-      <button class="status-btn ${d.pago?'pago':'pendente'}" data-toggle-status="${d.id}">${d.pago?'Pago':'Pendente'}</button>
+      ${isCardItem
+        ? `<span class="tag" style="align-self:center;">${d.pago?'Na fatura paga':'Na fatura'}</span>`
+        : `<button class="status-btn ${d.pago?'pago':'pendente'}" data-toggle-status="${d.id}">${d.pago?'Pago':'Pendente'}</button>`}
       <div class="exp-actions">
         <button class="btn btn-icon" data-edit-despesa="${d.id}">${svgIcon('edit')}</button>
         <button class="btn btn-icon" data-del-despesa="${d.id}" style="color:var(--rose);">${svgIcon('trash')}</button>
+      </div>
+    </div>`;
+}
+
+function invoiceRowHtml(cartaoId, mes){
+  const cartao = byId(state.cartoes, cartaoId);
+  if(!cartao) return '';
+  const itens = state.despesas.filter(d=>d.cartaoId===cartaoId && d.mes===mes);
+  const total = itens.reduce((s,d)=>s+Number(d.valor||0),0);
+  const todasPagas = itens.length>0 && itens.every(d=>d.pago);
+  const key = mes+'|'+cartaoId;
+  const isOpen = openInvoices.has(key);
+  const rows = itens.slice().sort((a,b)=>(a.vencimento||0)-(b.vencimento||0)).map(d=>expenseRowHtml(d, true)).join('');
+  return `
+    <div class="invoice-row ${isOpen?'open':''}" data-invoice="${key}">
+      <div class="invoice-head" data-toggle-invoice="${key}">
+        <div class="icon-badge" style="background:${(cartao.cor||'#b98cff')+'22'}">${cartao.icone||'💳'}</div>
+        <div class="exp-main">
+          <div class="desc">Fatura ${cartao.nome}</div>
+          <div class="exp-tags"><span class="tag">${itens.length} compra${itens.length!==1?'s':''}</span>${cartao.diaVencimento?`<span class="tag">vence dia ${cartao.diaVencimento}</span>`:''}</div>
+        </div>
+        <div class="exp-val">${fmt(total)}</div>
+        <button class="status-btn ${todasPagas?'pago':'pendente'}" data-toggle-invoice-status="${key}">${todasPagas?'Fatura paga':'Fatura pendente'}</button>
+        <div class="chevron" style="margin-left:4px;">${svgIcon('chevron')}</div>
+      </div>
+      <div class="invoice-body">
+        ${rows || '<div class="empty-msg">Nenhuma compra nesta fatura.</div>'}
       </div>
     </div>`;
 }
@@ -695,6 +792,88 @@ function renderContas(){
   });
 }
 
+/* ---------- CARTÕES ---------- */
+function renderCartoes(){
+  const container = document.getElementById('cartoesContainer');
+  if(!container) return;
+  const mesAtual = todayKey();
+  container.innerHTML = state.cartoes.map(c=>{
+    const contaVinculada = byId(state.contas, c.contaId);
+    const total = faturaTotal(c.id, mesAtual);
+    return `
+    <div class="account-card">
+      <div class="top">
+        <div class="icon-badge" style="background:${(c.cor||'#b98cff')+'22'}">${c.icone||'💳'}</div>
+        <div class="name">${c.nome}</div>
+      </div>
+      <div class="saldo mono" style="color:var(--rose)">${fmt(total)}</div>
+      <div style="color:var(--text-muted); font-size:11.5px; margin-top:4px;">Fatura do mês atual</div>
+      <div style="color:var(--text-muted); font-size:11.5px; margin-top:8px;">
+        ${contaVinculada?`Débito em: ${contaVinculada.icone||''} ${contaVinculada.nome}<br>`:''}
+        ${c.diaFechamento?`Fecha dia ${c.diaFechamento} · `:''}${c.diaVencimento?`Vence dia ${c.diaVencimento}`:''}
+      </div>
+      <div class="foot">
+        <button class="btn btn-ghost btn-sm" data-edit-cartao="${c.id}">${svgIcon('edit')} Editar</button>
+        <button class="btn btn-danger-outline btn-sm" data-del-cartao="${c.id}">${svgIcon('trash')}</button>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty-msg">Nenhum cartão cadastrado ainda.</div>';
+
+  container.querySelectorAll('[data-edit-cartao]').forEach(el=>{
+    el.addEventListener('click', ()=>openCartaoModal(el.dataset.editCartao));
+  });
+  container.querySelectorAll('[data-del-cartao]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      if(confirm('Excluir este cartão? As despesas já lançadas nele não serão excluídas.')){
+        await deleteDoc(doc(db,'cartoes', el.dataset.delCartao));
+        toast('Cartão excluído.');
+      }
+    });
+  });
+}
+
+function openCartaoModal(id){
+  const c = id ? byId(state.cartoes, id) : null;
+  const emojis = ['💳','🟣','🔵','⚫','🟠','🔴','🟡'];
+  openModal(`
+    <div class="modal-head"><h3>${c?'Editar cartão':'Novo cartão'}</h3>
+      <button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
+    <div class="form-grid">
+      <div class="field full"><label>Nome</label><input id="fNome" value="${c?c.nome:''}" placeholder="Ex: Nubank Ultravioleta"></div>
+      <div class="field"><label>Ícone</label><select id="fIcone">${emojis.map(e=>`<option ${c&&c.icone===e?'selected':''}>${e}</option>`).join('')}</select></div>
+      <div class="field"><label>Cor</label><input id="fCor" type="color" value="${c?c.cor:'#b98cff'}"></div>
+      <div class="field full"><label>Conta de onde sai o pagamento da fatura</label><select id="fConta">${optionsHtml(state.contas, c?c.contaId:null)}</select></div>
+      <div class="field"><label>Dia de fechamento</label><input id="fFechamento" type="number" min="1" max="31" value="${c?(c.diaFechamento||''):''}" placeholder="Ex: 25"></div>
+      <div class="field"><label>Dia de vencimento</label><input id="fVencimento" type="number" min="1" max="31" value="${c?(c.diaVencimento||''):''}" placeholder="Ex: 5"></div>
+    </div>
+    <div class="modal-actions">
+      ${c?`<button class="btn btn-danger-outline" id="mDelete">Excluir</button>`:''}
+      <button class="btn btn-ghost" id="mCancel">Cancelar</button>
+      <button class="btn btn-primary" id="mSave">Salvar</button>
+    </div>
+  `);
+  document.getElementById('mClose').addEventListener('click', closeModal);
+  document.getElementById('mCancel').addEventListener('click', closeModal);
+  if(c) document.getElementById('mDelete').addEventListener('click', async ()=>{
+    if(confirm('Excluir este cartão?')){ await deleteDoc(doc(db,'cartoes', id)); closeModal(); }
+  });
+  document.getElementById('mSave').addEventListener('click', async ()=>{
+    const nome = document.getElementById('fNome').value.trim();
+    if(!nome){ toast('Informe o nome do cartão.'); return; }
+    const payload = {
+      nome,
+      icone: document.getElementById('fIcone').value,
+      cor: document.getElementById('fCor').value,
+      contaId: document.getElementById('fConta').value || null,
+      diaFechamento: Number(document.getElementById('fFechamento').value)||null,
+      diaVencimento: Number(document.getElementById('fVencimento').value)||null,
+    };
+    if(c) await updateDoc(doc(db,'cartoes', id), payload);
+    else await addDoc(collection(db,'cartoes'), payload);
+    closeModal(); toast('Cartão salvo.');
+  });
+}
+
 /* ---------- CONFIG: categorias ---------- */
 function renderConfigCategorias(){
   const container = document.getElementById('categoriasList');
@@ -802,23 +981,31 @@ function openDespesaModal(id, defaultMes){
   const d = id ? byId(state.despesas, id) : null;
   const mes = d ? d.mes : (defaultMes || todayKey());
   const cat = d ? byId(state.categorias, d.categoriaId) : state.categorias[0];
+  const pagarComVal = d ? (d.cartaoId ? 'cartao:'+d.cartaoId : (d.contaId ? 'conta:'+d.contaId : '')) : '';
+  const pagarComOptions = `
+    <option value="">Selecione…</option>
+    ${state.contas.length?`<optgroup label="Contas">${state.contas.map(c=>`<option value="conta:${c.id}" ${pagarComVal==='conta:'+c.id?'selected':''}>${c.icone||''} ${c.nome}</option>`).join('')}</optgroup>`:''}
+    ${state.cartoes.length?`<optgroup label="Cartões de crédito">${state.cartoes.map(c=>`<option value="cartao:${c.id}" ${pagarComVal==='cartao:'+c.id?'selected':''}>${c.icone||'💳'} ${c.nome}</option>`).join('')}</optgroup>`:''}
+  `;
   openModal(`
     <div class="modal-head"><h3>${d?'Editar despesa':'Nova despesa'}</h3>
       <button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
     <div class="form-grid">
       <div class="field full"><label>Descrição</label><input id="fDesc" value="${d?d.descricao:''}" placeholder="Ex: Conta de luz"></div>
-      <div class="field"><label>Valor (R$)</label><input id="fValor" type="number" step="0.01" value="${d?d.valor:''}" placeholder="0,00"></div>
-      <div class="field"><label>Mês</label><select id="fMes">${monthOptionsHtml(mes)}</select></div>
+      <div class="field"><label id="lblValor">Valor (R$)</label><input id="fValor" type="number" step="0.01" value="${d?d.valor:''}" placeholder="0,00"></div>
+      <div class="field"><label>Mês${d?'':' inicial'}</label><select id="fMes">${monthOptionsHtml(mes)}</select></div>
       <div class="field"><label>Categoria</label><select id="fCat">${optionsHtml(state.categorias, d?d.categoriaId:(cat?cat.id:null))}</select></div>
       <div class="field"><label>Subcategoria</label><input id="fSub" list="subList" value="${d?(d.subcategoria||''):''}" placeholder="Selecione ou digite"><datalist id="subList"></datalist></div>
       <div class="field"><label>Tipo</label><select id="fTipo">${optionsHtml(state.tipos, d?d.tipoId:null)}</select></div>
       <div class="field"><label>Classe</label><select id="fClasse">${optionsHtml(state.classes, d?d.classeId:null)}</select></div>
-      <div class="field"><label>Conta de pagamento</label><select id="fConta">${optionsHtml(state.contas, d?d.contaId:null)}</select></div>
+      <div class="field full"><label>Pagar com</label><select id="fPagarCom">${pagarComOptions}</select></div>
       <div class="field"><label>Forma de pagamento</label><select id="fForma">${optionsHtml(state.formas, d?d.formaPagamentoId:null)}</select></div>
       <div class="field"><label>Dia de vencimento</label><input id="fVenc" type="number" min="1" max="31" value="${d?(d.vencimento||''):''}" placeholder="Ex: 10"></div>
-      <div class="field" style="display:flex; align-items:flex-end;">
+      <div class="field full" style="display:flex; align-items:center; gap:16px;">
         <div class="check-row"><input type="checkbox" id="fPago" ${d&&d.pago?'checked':''}><label style="margin:0;" for="fPago">Já foi pago</label></div>
+        ${d?'':`<div class="check-row"><input type="checkbox" id="fParcelada"><label style="margin:0;" for="fParcelada">Compra parcelada</label></div>`}
       </div>
+      ${d?'':`<div class="field full" id="parcelasWrap" style="display:none;"><label>Número de parcelas</label><input id="fParcelas" type="number" min="2" max="60" value="2"></div>`}
     </div>
     <div class="modal-actions">
       ${d?`<button class="btn btn-danger-outline" id="mDelete">Excluir</button>`:''}
@@ -835,26 +1022,63 @@ function openDespesaModal(id, defaultMes){
   document.getElementById('fCat').addEventListener('change', updateSubList);
   document.getElementById('mClose').addEventListener('click', closeModal);
   document.getElementById('mCancel').addEventListener('click', closeModal);
+  const parceladaEl = document.getElementById('fParcelada');
+  if(parceladaEl){
+    parceladaEl.addEventListener('change', ()=>{
+      document.getElementById('parcelasWrap').style.display = parceladaEl.checked ? 'block' : 'none';
+      document.getElementById('lblValor').textContent = parceladaEl.checked ? 'Valor total da compra (R$)' : 'Valor (R$)';
+    });
+  }
   if(d) document.getElementById('mDelete').addEventListener('click', async ()=>{
     if(confirm('Excluir esta despesa?')){ await deleteDoc(doc(db,'despesas', id)); closeModal(); }
   });
   document.getElementById('mSave').addEventListener('click', async ()=>{
-    const payload = {
+    const pagarCom = document.getElementById('fPagarCom').value;
+    const [pagarTipo, pagarId] = pagarCom ? pagarCom.split(':') : [null, null];
+    const base = {
       descricao: document.getElementById('fDesc').value.trim(),
-      valor: Number(document.getElementById('fValor').value)||0,
-      mes: document.getElementById('fMes').value,
       categoriaId: document.getElementById('fCat').value || null,
       subcategoria: document.getElementById('fSub').value.trim(),
       tipoId: document.getElementById('fTipo').value || null,
       classeId: document.getElementById('fClasse').value || null,
-      contaId: document.getElementById('fConta').value || null,
+      contaId: pagarTipo==='conta' ? pagarId : null,
+      cartaoId: pagarTipo==='cartao' ? pagarId : null,
       formaPagamentoId: document.getElementById('fForma').value || null,
       vencimento: Number(document.getElementById('fVenc').value)||null,
-      pago: document.getElementById('fPago').checked,
     };
-    if(!payload.descricao || !payload.valor){ toast('Preencha descrição e valor.'); return; }
-    if(d) await updateDoc(doc(db,'despesas', id), payload);
-    else await addDoc(collection(db,'despesas'), payload);
+    const valorInformado = Number(document.getElementById('fValor').value)||0;
+    const mesInicial = document.getElementById('fMes').value;
+    const pago = document.getElementById('fPago').checked;
+    if(!base.descricao || !valorInformado){ toast('Preencha descrição e valor.'); return; }
+
+    if(d){
+      await updateDoc(doc(db,'despesas', id), { ...base, valor: valorInformado, mes: mesInicial, pago });
+      closeModal(); toast('Despesa salva.'); return;
+    }
+
+    const parcelada = parceladaEl && parceladaEl.checked;
+    const numParcelas = parcelada ? Math.max(2, Number(document.getElementById('fParcelas').value)||2) : 1;
+
+    if(!parcelada){
+      await addDoc(collection(db,'despesas'), { ...base, valor: valorInformado, mes: mesInicial, pago });
+    } else {
+      const parcelamentoId = genId();
+      const valorParcela = round2(valorInformado / numParcelas);
+      const diferenca = round2(valorInformado - valorParcela*numParcelas);
+      const criacoes = [];
+      for(let i=0;i<numParcelas;i++){
+        const valorEssaParcela = i===numParcelas-1 ? round2(valorParcela+diferenca) : valorParcela;
+        criacoes.push(addDoc(collection(db,'despesas'), {
+          ...base,
+          descricao: `${base.descricao} (${i+1}/${numParcelas})`,
+          valor: valorEssaParcela,
+          mes: addMonths(mesInicial, i),
+          pago: i===0 ? pago : false,
+          parcelamentoId, parcelaAtual: i+1, parcelaTotal: numParcelas,
+        }));
+      }
+      await Promise.all(criacoes);
+    }
     closeModal(); toast('Despesa salva.');
   });
 }
@@ -1066,6 +1290,7 @@ document.querySelectorAll('.tab-nav-sm button').forEach(btn=>{
 document.getElementById('btnAddMesRetro').addEventListener('click', openMesRetroModal);
 document.getElementById('btnNovaReceita').addEventListener('click', ()=>openReceitaModal(null));
 document.getElementById('btnNovaConta').addEventListener('click', ()=>openContaModal(null));
+document.getElementById('btnNovoCartao').addEventListener('click', ()=>openCartaoModal(null));
 document.getElementById('btnNovaCategoria').addEventListener('click', ()=>openCategoriaModal(null));
 document.getElementById('btnNovoTipo').addEventListener('click', ()=>openSimpleModal('tipos', null, 'Tipo'));
 document.getElementById('btnNovaClasse').addEventListener('click', ()=>openClasseModal(null));

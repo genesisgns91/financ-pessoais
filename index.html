@@ -2,7 +2,14 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#10121b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cofre">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2310121b'/%3E%3Ccircle cx='50' cy='50' r='34' fill='none' stroke='%232fe0a8' stroke-width='9'/%3E%3Cpath d='M50 16 A34 34 0 0 1 82 55' fill='none' stroke='%23ff6b81' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="manifest" href='data:application/manifest+json,{"name":"Cofre%20-%20Controle%20Financeiro","short_name":"Cofre","display":"standalone","start_url":".","background_color":"%2310121b","theme_color":"%2310121b"}'>
 <title>Cofre — Controle Financeiro Pessoal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,8 +41,8 @@
     --shadow:0 8px 30px rgba(0,0,0,.35);
     font-family:'Inter',sans-serif;
   }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0; overscroll-behavior-y:contain;}
   body{
     background:
       radial-gradient(1200px 600px at 15% -10%, #1c2440 0%, transparent 60%),
@@ -43,15 +50,25 @@
       var(--bg-base);
     color:var(--text-primary);
     min-height:100vh;
+    min-height:100dvh;
     -webkit-font-smoothing:antialiased;
+    touch-action:pan-y;
   }
+  button{ -webkit-tap-highlight-color:transparent; touch-action:manipulation;}
   ::selection{ background:var(--emerald); color:#0a0d14; }
   a{color:inherit;}
   .mono{font-family:'JetBrains Mono',monospace;}
-  .container{ max-width:1080px; margin:0 auto; padding:28px 20px 100px; }
+  .container{ max-width:1080px; margin:0 auto; padding:20px 20px 100px; }
 
   /* Header */
-  header.top{ display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:22px; flex-wrap:wrap;}
+  header.top{
+    display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:22px; flex-wrap:wrap;
+    position:sticky; top:0; z-index:60; padding:12px 0 12px;
+    padding-top:calc(12px + env(safe-area-inset-top));
+    background:linear-gradient(var(--bg-base) 78%, transparent);
+    backdrop-filter:blur(10px);
+    margin-top:calc(-1 * env(safe-area-inset-top));
+  }
   .brand{ display:flex; align-items:center; gap:12px;}
   .brand-mark{ width:44px; height:44px; border-radius:50%; position:relative; background:conic-gradient(var(--emerald) 0deg 216deg, var(--rose) 216deg 360deg); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
   .brand-mark::after{ content:""; position:absolute; inset:5px; border-radius:50%; background:var(--bg-base);}
@@ -76,10 +93,22 @@
   }
   nav.tabs button:hover{ color:var(--text-primary); }
   nav.tabs button.active{ background:var(--bg-elevated-2); color:var(--text-primary); box-shadow:inset 0 0 0 1px var(--border);}
+  nav.tabs .nav-ico{ display:none; }
+
+  /* Floating action button (mobile) */
+  .fab{
+    display:none; position:fixed; right:20px; bottom:calc(84px + env(safe-area-inset-bottom));
+    width:56px; height:56px; border-radius:50%; background:var(--emerald); color:#08120e;
+    align-items:center; justify-content:center; box-shadow:0 10px 26px rgba(47,224,168,.35), 0 2px 6px rgba(0,0,0,.3);
+    z-index:70; border:none; cursor:pointer;
+  }
+  .fab svg{ width:24px; height:24px; stroke:#08120e; stroke-width:2.4;}
+  .fab:active{ transform:scale(.94); }
 
   section.view{ display:none; }
   section.view.active{ display:block; animation:fadein .25s ease; }
   @keyframes fadein{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+  @keyframes slideup{ from{ transform:translateY(100%); } to{ transform:translateY(0); } }
 
   /* Cards */
   .card{ background:var(--bg-surface); border:1px solid var(--border-soft); border-radius:var(--radius); padding:20px; margin-bottom:16px; }
@@ -169,6 +198,7 @@
   .modal-overlay.active{ display:flex; }
   .modal{ background:var(--bg-elevated-solid); border:1px solid var(--border); border-radius:18px; padding:24px; width:100%; max-width:480px; box-shadow:var(--shadow); animation:pop .2s ease;}
   @keyframes pop{ from{ transform:scale(.96); opacity:0;} to{transform:scale(1); opacity:1;} }
+  .modal-drag-handle{ display:none; }
   .modal-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;}
   .modal-head h3{ font-family:'Sora',sans-serif; margin:0; font-size:17px;}
   .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:18px;}
@@ -206,9 +236,51 @@
 
   @media(max-width:640px){
     .form-grid{ grid-template-columns:1fr;}
-    .month-stats{ gap:12px;}
-    header.top{ flex-direction:column; align-items:flex-start;}
     .exp-tags{ display:none;}
+  }
+
+  /* ---------- Modo app: telas de celular ---------- */
+  @media(max-width:720px){
+    .container{ padding:14px 14px calc(96px + env(safe-area-inset-bottom)); }
+
+    header.top{ padding-bottom:10px; margin-bottom:14px; }
+    .brand h1{ font-size:19px; }
+    .brand-mark{ width:38px; height:38px; }
+    .balance-pill{ padding:8px 14px; }
+    .balance-pill .val{ font-size:15px; }
+
+    /* nav vira barra inferior fixa, estilo app nativo */
+    nav.tabs{
+      position:fixed; left:0; right:0; bottom:0; z-index:80; width:100%;
+      background:rgba(23,26,39,.92); backdrop-filter:blur(14px);
+      border-radius:0; border:none; border-top:1px solid var(--border-soft);
+      padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+      justify-content:space-around; margin-bottom:0; gap:0;
+    }
+    nav.tabs button{
+      flex-direction:column; gap:3px; padding:6px 4px; border-radius:12px; flex:1;
+      font-size:10.5px; font-weight:600; color:var(--text-muted);
+    }
+    nav.tabs button.active{ background:transparent; box-shadow:none; color:var(--emerald); }
+    nav.tabs .nav-ico{ display:flex; }
+    nav.tabs .nav-ico svg{ width:21px; height:21px; }
+
+    .fab{ display:flex; }
+
+    #btnNovaReceita, #btnNovaConta, #btnNovoCartao{ display:none; }
+
+    .card, .month-card, .account-card, .invoice-row{ border-radius:14px; }
+    .accounts-grid{ grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); }
+    .month-stats{ gap:10px; }
+    .stat{ min-width:auto; }
+
+    /* modal vira bottom sheet */
+    .modal-overlay{ align-items:flex-end; padding:0; }
+    .modal{
+      max-width:100%; border-radius:20px 20px 0 0; max-height:90vh; overflow-y:auto;
+      animation:slideup .28s cubic-bezier(.32,.72,0,1); padding:14px 18px calc(20px + env(safe-area-inset-bottom));
+    }
+    .modal-drag-handle{ display:block; width:36px; height:4px; border-radius:100px; background:var(--border); margin:0 auto 14px; }
   }
 </style>
 </head>
@@ -230,11 +302,26 @@
   </header>
 
   <nav class="tabs">
-    <button data-tab="despesas" class="active">Despesas</button>
-    <button data-tab="receitas">Receitas</button>
-    <button data-tab="contas">Contas</button>
-    <button data-tab="cartoes">Cartões</button>
-    <button data-tab="config">Configurações</button>
+    <button data-tab="despesas" class="active">
+      <span class="nav-ico"><svg class="icon" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h11l4 4v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M16 12h3"/></svg></span>
+      <span>Despesas</span>
+    </button>
+    <button data-tab="receitas">
+      <span class="nav-ico"><svg class="icon" viewBox="0 0 24 24"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></svg></span>
+      <span>Receitas</span>
+    </button>
+    <button data-tab="contas">
+      <span class="nav-ico"><svg class="icon" viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M4 21V10l8-6 8 6v11"/><path d="M9 21v-6h6v6"/></svg></span>
+      <span>Contas</span>
+    </button>
+    <button data-tab="cartoes">
+      <span class="nav-ico"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg></span>
+      <span>Cartões</span>
+    </button>
+    <button data-tab="config">
+      <span class="nav-ico"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 0 1 4 0v.09A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 0 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15Z"/></svg></span>
+      <span>Config.</span>
+    </button>
   </nav>
 
   <!-- DESPESAS -->
@@ -320,6 +407,10 @@
   </section>
 
 </div>
+
+<button class="fab" id="fabAdd" aria-label="Adicionar">
+  <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
 
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal" id="modalBox"></div>
@@ -968,7 +1059,7 @@ const overlay = document.getElementById('modalOverlay');
 const modalBox = document.getElementById('modalBox');
 function closeModal(){ overlay.classList.remove('active'); modalBox.innerHTML=''; }
 overlay.addEventListener('click', e=>{ if(e.target===overlay) closeModal(); });
-function openModal(html){ modalBox.innerHTML = html; overlay.classList.add('active'); }
+function openModal(html){ modalBox.innerHTML = '<div class="modal-drag-handle"></div>' + html; overlay.classList.add('active'); }
 
 function optionsHtml(arr, selectedId, labelKey='nome'){
   return arr.map(x=>`<option value="${x.id}" ${x.id===selectedId?'selected':''}>${x[labelKey]}</option>`).join('');
@@ -1271,13 +1362,26 @@ function openMesRetroModal(){
 }
 
 /* ---------- eventos gerais / navegação ---------- */
+let activeTab = 'despesas';
 document.querySelectorAll('nav.tabs button').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     document.querySelectorAll('section.view').forEach(v=>v.classList.remove('active'));
     document.getElementById('view-'+btn.dataset.tab).classList.add('active');
+    activeTab = btn.dataset.tab;
+    updateFab();
   });
+});
+function updateFab(){
+  const fab = document.getElementById('fabAdd');
+  fab.style.display = (activeTab==='config') ? 'none' : '';
+}
+document.getElementById('fabAdd').addEventListener('click', ()=>{
+  if(activeTab==='despesas') openDespesaModal(null, todayKey());
+  else if(activeTab==='receitas') openReceitaModal(null);
+  else if(activeTab==='contas') openContaModal(null);
+  else if(activeTab==='cartoes') openCartaoModal(null);
 });
 document.querySelectorAll('.tab-nav-sm button').forEach(btn=>{
   btn.addEventListener('click', ()=>{

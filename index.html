@@ -227,6 +227,17 @@
   .add-inline{ display:flex; gap:8px; margin-top:10px;}
   .add-inline input{ flex:1;}
  
+  .cmp-row{ display:flex; align-items:center; gap:10px; padding:6px 0;}
+  .cmp-row .cmp-label{ width:100px; flex-shrink:0; font-size:12px; color:var(--text-secondary); text-transform:capitalize;}
+  .cmp-row .cmp-track{ flex:1; height:16px; background:var(--bg-elevated-2); border-radius:6px; overflow:hidden; position:relative;}
+  .cmp-row .cmp-fill{ height:100%; border-radius:6px; background:var(--emerald); transition:width .4s ease;}
+  .cmp-row .cmp-val{ width:100px; text-align:right; font-family:'JetBrains Mono',monospace; font-size:12.5px; flex-shrink:0;}
+  .cmp-row.is-current .cmp-label{ color:var(--emerald); font-weight:700;}
+  @media(max-width:640px){
+    .cmp-row .cmp-label{ width:72px; font-size:11px;}
+    .cmp-row .cmp-val{ width:82px; font-size:11px;}
+  }
+
   .bar-row{ margin-bottom:14px;}
   .bar-row .bl{ display:flex; justify-content:space-between; font-size:12px; color:var(--text-secondary); margin-bottom:6px;}
   .bar-track{ position:relative; height:9px; background:var(--bg-elevated-2); border-radius:100px; overflow:visible;}
@@ -381,6 +392,10 @@
       <span class="nav-ico"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg></span>
       <span>Cartões</span>
     </button>
+    <button data-tab="dashboards">
+      <span class="nav-ico"><svg class="icon" viewBox="0 0 24 24"><path d="M4 19V10"/><path d="M10 19V4"/><path d="M16 19V13"/><path d="M4 19h16"/></svg></span>
+      <span>Dashboards</span>
+    </button>
     <button data-tab="config">
       <span class="nav-ico"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 0 1 4 0v.09A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 0 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15Z"/></svg></span>
       <span>Config.</span>
@@ -439,6 +454,65 @@
     <div class="accounts-grid" id="cartoesContainer"></div>
   </section>
  
+  <!-- DASHBOARDS -->
+  <section class="view" id="view-dashboards">
+    <div class="card">
+      <div class="card-title">📊 Comparativo entre meses</div>
+      <div class="form-grid" style="margin-bottom:6px;">
+        <div class="field">
+          <label>Comparar por</label>
+          <select id="dashDimensao">
+            <option value="total">Total geral</option>
+            <option value="tipo">Tipo</option>
+            <option value="categoria">Categoria</option>
+            <option value="subcategoria">Subcategoria</option>
+            <option value="forma">Forma de pagamento</option>
+          </select>
+        </div>
+        <div class="field" id="dashCategoriaWrap" style="display:none;">
+          <label id="dashValorLabel">Categoria</label>
+          <select id="dashValor"></select>
+        </div>
+        <div class="field" id="dashSubWrap" style="display:none;">
+          <label>Subcategoria</label>
+          <select id="dashSub"></select>
+        </div>
+        <div class="field">
+          <label>De</label>
+          <select id="dashMesInicio"></select>
+        </div>
+        <div class="field">
+          <label>Até</label>
+          <select id="dashMesFim"></select>
+        </div>
+      </div>
+      <div id="dashChartComparativo"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🎯 Regra 50/30/20</div>
+      <div class="form-grid" style="margin-bottom:6px;">
+        <div class="field">
+          <label>Mês</label>
+          <select id="dash523Mes"></select>
+        </div>
+        <div class="field">
+          <label>Ver por</label>
+          <select id="dash523Filtro">
+            <option value="total">Total (contas + cartões)</option>
+            <option value="cartao">Cartão de crédito específico</option>
+            <option value="categoria">Categoria específica</option>
+          </select>
+        </div>
+        <div class="field" id="dash523SubWrap" style="display:none;">
+          <label id="dash523SubLabel">Selecione</label>
+          <select id="dash523Sub"></select>
+        </div>
+      </div>
+      <div id="dash523Body"></div>
+    </div>
+  </section>
+
   <!-- CONFIG -->
   <section class="view" id="view-config">
     <div class="tab-nav-sm">
@@ -636,16 +710,17 @@ function listen(colName, stateKey, renderFn){
 onSnapshot(doc(db,'meta','geral'), snap=>{
   state.config = snap.exists()? snap.data() : {mesesRetroativos:[]};
   renderDespesas();
+  renderDashboards();
 });
  
-listen('categorias','categorias', ()=>{ renderDespesas(); renderConfigCategorias(); });
-listen('tipos','tipos', ()=>{ renderDespesas(); renderConfigTipos(); });
-listen('classes','classes', ()=>{ renderDespesas(); renderConfigClasses(); });
-listen('formasPagamento','formas', ()=>{ renderDespesas(); renderConfigFormas(); });
-listen('contas','contas', ()=>{ renderContas(); renderDespesas(); renderReceitas(); renderSaldoTotal(); renderCartoes(); });
-listen('cartoes','cartoes', ()=>{ renderDespesas(); renderContas(); renderCartoes(); renderSaldoTotal(); });
-listen('despesas','despesas', ()=>{ renderDespesas(); renderContas(); renderSaldoTotal(); renderCartoes(); });
-listen('receitas','receitas', ()=>{ renderReceitas(); renderContas(); renderSaldoTotal(); });
+listen('categorias','categorias', ()=>{ renderDespesas(); renderConfigCategorias(); renderDashboards(); });
+listen('tipos','tipos', ()=>{ renderDespesas(); renderConfigTipos(); renderDashboards(); });
+listen('classes','classes', ()=>{ renderDespesas(); renderConfigClasses(); renderDashboards(); });
+listen('formasPagamento','formas', ()=>{ renderDespesas(); renderConfigFormas(); renderDashboards(); });
+listen('contas','contas', ()=>{ renderContas(); renderDespesas(); renderReceitas(); renderSaldoTotal(); renderCartoes(); renderDashboards(); });
+listen('cartoes','cartoes', ()=>{ renderDespesas(); renderContas(); renderCartoes(); renderSaldoTotal(); renderDashboards(); });
+listen('despesas','despesas', ()=>{ renderDespesas(); renderContas(); renderSaldoTotal(); renderCartoes(); renderDashboards(); });
+listen('receitas','receitas', ()=>{ renderReceitas(); renderContas(); renderSaldoTotal(); renderDashboards(); });
  
 seedIfEmpty();
  
@@ -886,6 +961,230 @@ function renderClassesResumo(){
   }).join('') + (totalReceitas===0?'<div class="empty-msg">Cadastre receitas no mês atual para calcular os percentuais.</div>':'');
 }
  
+/* ---------- DASHBOARDS ---------- */
+function dashboardEls(){
+  return {
+    dimensao: document.getElementById('dashDimensao'),
+    valorWrap: document.getElementById('dashCategoriaWrap'),
+    valorLabel: document.getElementById('dashValorLabel'),
+    valor: document.getElementById('dashValor'),
+    subWrap: document.getElementById('dashSubWrap'),
+    sub: document.getElementById('dashSub'),
+    mesInicio: document.getElementById('dashMesInicio'),
+    mesFim: document.getElementById('dashMesFim'),
+    chart: document.getElementById('dashChartComparativo'),
+    mes523: document.getElementById('dash523Mes'),
+    filtro523: document.getElementById('dash523Filtro'),
+    subWrap523: document.getElementById('dash523SubWrap'),
+    subLabel523: document.getElementById('dash523SubLabel'),
+    sub523: document.getElementById('dash523Sub'),
+    body523: document.getElementById('dash523Body'),
+  };
+}
+
+function populateSelectPreserving(sel, options, placeholder){
+  if(!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = (placeholder? `<option value="">${placeholder}</option>`:'') + options.map(o=>`<option value="${o.value}">${o.label}</option>`).join('');
+  if([...sel.options].some(o=>o.value===prev)) sel.value = prev;
+  else if(placeholder) sel.value = '';
+}
+
+function populateMonthSelect(sel, defaultVal){
+  if(!sel) return;
+  const months = getMonthsList();
+  const prev = sel.dataset.inited ? sel.value : defaultVal;
+  sel.innerHTML = months.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');
+  if(months.includes(prev)) sel.value = prev; else sel.value = months[months.length-1];
+  sel.dataset.inited = '1';
+}
+
+let dashInited = false;
+function initDashboards(){
+  if(dashInited) return;
+  dashInited = true;
+  const els = dashboardEls();
+  if(!els.dimensao) return;
+  els.dimensao.addEventListener('change', ()=>{ updateDashValorUI(); renderComparativo(); });
+  els.valor.addEventListener('change', ()=>{ updateDashSubUI(); renderComparativo(); });
+  els.sub.addEventListener('change', renderComparativo);
+  els.mesInicio.addEventListener('change', renderComparativo);
+  els.mesFim.addEventListener('change', renderComparativo);
+  els.mes523.addEventListener('change', render523);
+  els.filtro523.addEventListener('change', ()=>{ update523SubUI(); render523(); });
+  els.sub523.addEventListener('change', render523);
+}
+
+function updateDashValorUI(){
+  const els = dashboardEls();
+  const dim = els.dimensao.value;
+  if(dim==='total'){
+    els.valorWrap.style.display='none';
+    els.subWrap.style.display='none';
+    return;
+  }
+  els.valorWrap.style.display='block';
+  if(dim==='tipo'){
+    els.valorLabel.textContent='Tipo';
+    populateSelectPreserving(els.valor, state.tipos.map(t=>({value:t.id,label:t.nome})));
+    els.subWrap.style.display='none';
+  } else if(dim==='categoria'){
+    els.valorLabel.textContent='Categoria';
+    populateSelectPreserving(els.valor, state.categorias.map(c=>({value:c.id,label:c.nome})));
+    els.subWrap.style.display='none';
+  } else if(dim==='subcategoria'){
+    els.valorLabel.textContent='Categoria';
+    populateSelectPreserving(els.valor, state.categorias.map(c=>({value:c.id,label:c.nome})));
+    els.subWrap.style.display='block';
+    updateDashSubUI();
+  } else if(dim==='forma'){
+    els.valorLabel.textContent='Forma de pagamento';
+    populateSelectPreserving(els.valor, state.formas.map(f=>({value:f.id,label:f.nome})));
+    els.subWrap.style.display='none';
+  }
+}
+
+function updateDashSubUI(){
+  const els = dashboardEls();
+  if(els.dimensao.value!=='subcategoria') return;
+  const cat = byId(state.categorias, els.valor.value);
+  populateSelectPreserving(els.sub, (cat?.subcategorias||[]).map(s=>({value:s,label:s})));
+}
+
+function update523SubUI(){
+  const els = dashboardEls();
+  const filtro = els.filtro523.value;
+  if(filtro==='total'){ els.subWrap523.style.display='none'; return; }
+  els.subWrap523.style.display='block';
+  if(filtro==='cartao'){
+    els.subLabel523.textContent='Cartão';
+    populateSelectPreserving(els.sub523, state.cartoes.map(c=>({value:c.id,label:c.nome})));
+  } else if(filtro==='categoria'){
+    els.subLabel523.textContent='Categoria';
+    populateSelectPreserving(els.sub523, state.categorias.map(c=>({value:c.id,label:c.nome})));
+  }
+}
+
+function renderComparativo(){
+  const els = dashboardEls();
+  if(!els.chart) return;
+  const dim = els.dimensao.value;
+  const mesIni = els.mesInicio.value;
+  const mesFimV = els.mesFim.value;
+  if(!mesIni || !mesFimV) return;
+  let start = monthOrder(mesIni), end = monthOrder(mesFimV);
+  if(start>end){ const tmp=start; start=end; end=tmp; }
+  const months = getMonthsList().filter(m=>monthOrder(m)>=start && monthOrder(m)<=end);
+
+  function valorFiltro(d){
+    if(dim==='total') return true;
+    if(dim==='tipo') return d.tipoId === els.valor.value;
+    if(dim==='categoria') return d.categoriaId === els.valor.value;
+    if(dim==='subcategoria') return d.categoriaId === els.valor.value && d.subcategoria === els.sub.value;
+    if(dim==='forma') return d.formaPagamentoId === els.valor.value;
+    return true;
+  }
+  const needsValor = dim!=='total' && !els.valor.value;
+  const needsSub = dim==='subcategoria' && !els.sub.value;
+  if(needsValor || needsSub){
+    els.chart.innerHTML = '<div class="empty-msg">Selecione um valor para comparar.</div>';
+    return;
+  }
+
+  const dados = months.map(m=>{
+    const total = state.despesas.filter(d=>d.mes===m && valorFiltro(d)).reduce((s,d)=>s+Number(d.valor||0),0);
+    return {mes:m, total};
+  });
+  const max = Math.max(1, ...dados.map(x=>x.total));
+  const hoje = todayKey();
+  els.chart.innerHTML = dados.map(x=>{
+    const pct = (x.total/max)*100;
+    return `
+    <div class="cmp-row ${x.mes===hoje?'is-current':''}">
+      <div class="cmp-label">${monthLabel(x.mes)}</div>
+      <div class="cmp-track"><div class="cmp-fill" style="width:${pct}%"></div></div>
+      <div class="cmp-val">${fmt(x.total)}</div>
+    </div>`;
+  }).join('') || '<div class="empty-msg">Nenhum dado no período selecionado.</div>';
+}
+
+function render523(){
+  const els = dashboardEls();
+  if(!els.body523) return;
+  const mes = els.mes523.value;
+  if(!mes) return;
+  const filtro = els.filtro523.value;
+  const subId = els.sub523.value;
+
+  function escopoFiltro(d){
+    if(filtro==='total') return true;
+    if(filtro==='cartao') return d.cartaoId === subId;
+    if(filtro==='categoria') return d.categoriaId === subId;
+    return true;
+  }
+  const precisaSub = filtro!=='total' && !subId;
+  if(precisaSub){
+    els.body523.innerHTML = '<div class="empty-msg">Selecione uma opção para ver o detalhamento.</div>';
+    return;
+  }
+  if(state.classes.length===0){
+    els.body523.innerHTML = '<div class="empty-msg">Cadastre classes em Configurações para usar a regra 50/30/20.</div>';
+    return;
+  }
+
+  const totalReceitas = state.receitas.filter(r=>r.mes===mes).reduce((s,r)=>s+Number(r.valor||0),0);
+  const despesasEscopo = state.despesas.filter(d=>d.mes===mes && escopoFiltro(d));
+  const totalEscopo = despesasEscopo.reduce((s,d)=>s+Number(d.valor||0),0);
+
+  const linhas = state.classes.map(c=>{
+    const gasto = despesasEscopo.filter(d=>d.classeId===c.id).reduce((s,d)=>s+Number(d.valor||0),0);
+    const realPct = totalReceitas>0 ? (gasto/totalReceitas*100) : 0;
+    const meta = Number(c.metaPercentual||0);
+    const composicaoPct = totalEscopo>0 ? (gasto/totalEscopo*100) : 0;
+    return `
+      <div class="bar-row">
+        <div class="bl"><span>${c.nome}</span><span>${fmt(gasto)} • ${realPct.toFixed(0)}% da renda (meta ${meta}%) • ${composicaoPct.toFixed(0)}% do escopo</span></div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${Math.min(realPct,100)}%; background:${c.cor||'#2fe0a8'};"></div>
+          <div class="bar-target" style="left:${Math.min(meta,100)}%;"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const semClasse = despesasEscopo.filter(d=>!d.classeId).reduce((s,d)=>s+Number(d.valor||0),0);
+  const semClasseHtml = semClasse>0 ? `
+    <div class="bar-row">
+      <div class="bl"><span>Sem classe definida</span><span>${fmt(semClasse)} • ${totalReceitas>0?((semClasse/totalReceitas*100).toFixed(0)):0}% da renda</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${totalReceitas>0?Math.min(semClasse/totalReceitas*100,100):0}%; background:var(--text-muted);"></div></div>
+    </div>` : '';
+
+  const resumoTopo = `
+    <div class="row-between" style="margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+      <div class="stat" style="text-align:left;"><div class="k">Total no escopo</div><div class="v mono">${fmt(totalEscopo)}</div></div>
+      <div class="stat" style="text-align:left;"><div class="k">Renda do mês</div><div class="v mono" style="color:var(--emerald)">${fmt(totalReceitas)}</div></div>
+    </div>`;
+
+  els.body523.innerHTML = resumoTopo + linhas + semClasseHtml +
+    (totalReceitas===0 ? '<div class="empty-msg">Cadastre receitas neste mês para calcular os percentuais da renda.</div>' : '');
+}
+
+function renderDashboards(){
+  const els = dashboardEls();
+  if(!els.dimensao) return;
+  const hoje = todayKey();
+  const months = getMonthsList();
+  const idxHoje = months.indexOf(hoje);
+  const defaultInicio = months[Math.max(0, idxHoje-5)] || months[0];
+  populateMonthSelect(els.mesInicio, defaultInicio);
+  populateMonthSelect(els.mesFim, hoje);
+  populateMonthSelect(els.mes523, hoje);
+
+  updateDashValorUI();
+  update523SubUI();
+  renderComparativo();
+  render523();
+}
+
 /* ---------- RECEITAS ---------- */
 function renderReceitas(){
   const container = document.getElementById('receitasContainer');
@@ -1768,11 +2067,12 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     document.getElementById('view-'+btn.dataset.tab).classList.add('active');
     activeTab = btn.dataset.tab;
     updateFab();
+    if(activeTab==='dashboards'){ initDashboards(); renderDashboards(); }
   });
 });
 function updateFab(){
   const fab = document.getElementById('fabAdd');
-  fab.style.display = (activeTab==='config') ? 'none' : '';
+  fab.style.display = (activeTab==='config' || activeTab==='dashboards') ? 'none' : '';
 }
 document.getElementById('fabAdd').addEventListener('click', ()=>{
   if(activeTab==='despesas') openDespesaModal(null, todayKey());
@@ -1798,6 +2098,8 @@ document.getElementById('btnNovaClasse').addEventListener('click', ()=>openClass
 document.getElementById('btnNovaForma').addEventListener('click', ()=>openSimpleModal('formasPagamento', null, 'Forma de pagamento'));
  
 openMonths.add(todayKey());
+initDashboards();
+renderDashboards();
 </script>
 </body>
 </html>

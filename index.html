@@ -240,7 +240,7 @@
 
   /* Ranking (dashboards) */
   .rank-row{ display:flex; align-items:center; gap:10px; padding:7px 0;}
-  .rank-row .rank-label{ width:168px; flex-shrink:0; font-size:12px; color:var(--text-secondary); line-height:1.25; display:flex; align-items:center; gap:6px;}
+  .rank-row .rank-label{ width:168px; flex-shrink:0; font-size:12px; color:var(--text-secondary); line-height:1.25;}
   .rank-row .rank-track{ flex:1; height:16px; background:var(--bg-elevated-2); border-radius:6px; overflow:hidden;}
   .rank-row .rank-fill{ height:100%; border-radius:6px; transition:width .4s ease;}
   .rank-row .rank-val{ width:148px; flex-shrink:0; text-align:right; font-family:'JetBrains Mono',monospace; font-size:12px;}
@@ -279,13 +279,6 @@
   .receita-group-head span:last-child{ font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--text-secondary); text-transform:none; letter-spacing:0; font-weight:600;}
   .receita-group:first-child .receita-group-head{ padding-top:2px;}
   .receita-group:not(:first-child) .receita-group-head{ border-top:1px solid var(--border-soft); margin-top:4px;}
-
-  /* Seletor de ícones flat */
-  .icon-picker{ display:grid; grid-template-columns:repeat(auto-fill,minmax(42px,1fr)); gap:8px; max-height:196px; overflow-y:auto; padding:4px 2px; }
-  .icon-opt{ all:unset; box-sizing:border-box; cursor:pointer; display:flex; align-items:center; justify-content:center; width:100%; aspect-ratio:1; border-radius:10px; background:var(--bg-elevated); border:1px solid var(--border-soft); color:var(--text-secondary); transition:.15s; }
-  .icon-opt:hover{ background:var(--bg-elevated-2); color:var(--text-primary); }
-  .icon-opt.selected{ background:var(--emerald-dim); border-color:var(--emerald); color:var(--emerald); }
-  .icon-badge svg{ display:block; }
 
   .bar-row{ margin-bottom:14px;}
   .bar-row .bl{ display:flex; justify-content:space-between; font-size:12px; color:var(--text-secondary); margin-bottom:6px;}
@@ -693,102 +686,7 @@ const RECORRENCIA_HELP = {
   variavel: 'Pode ou não ocorrer — não preenche os próximos meses automaticamente.',
 };
 const MESES_AUTOFILL = 24;
-
-/* ---------- ícones flat (substituem os emojis antigos) ---------- */
-const ICON_LIB = {
-  home:        '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>',
-  food:        '<path d="M7 2v7a2 2 0 0 0 2 2v11"/><path d="M7 2v6M10 2v6"/><path d="M16 2c-1.7 0-3 1.8-3 4.5S14.3 11 16 11v11"/>',
-  car:         '<path d="M4 17h16"/><circle cx="7" cy="17" r="1.8"/><circle cx="17" cy="17" r="1.8"/><path d="M4 17l1.4-6a2 2 0 0 1 2-1.5h9.2a2 2 0 0 1 2 1.5L20 17"/><path d="M7 9.5V6h10v3.5"/>',
-  pill:        '<rect x="3" y="9" width="18" height="6" rx="3"/><path d="M12 9v6"/>',
-  game:        '<rect x="2" y="7" width="20" height="10" rx="5"/><path d="M7 10v4M5 12h4"/><circle cx="16" cy="11" r="1"/><circle cx="18.5" cy="13.5" r="1"/>',
-  book:        '<path d="M12 6c-2-2-5-2-8-1v13c3-1 6-1 8 1 2-2 5-2 8-1V5c-3-1-6-1-8 1Z"/><path d="M12 6v13"/>',
-  box:         '<path d="M21 8l-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',
-  shirt:       '<path d="M8 3 3 7l3 3 2-2v11h8V8l2 2 3-3-5-4-2 2h-4Z"/>',
-  plane:       '<path d="M12 2 14 9 21 11 14 13 12 21 10 13 3 11 10 9Z"/>',
-  paw:         '<circle cx="7" cy="8" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="17" cy="8" r="1.6"/><path d="M12 12c-3 0-5 2-5 4.5S9 20 12 20s5-1.5 5-3.5-2-4.5-5-4.5Z"/>',
-  gift:        '<rect x="3" y="9" width="18" height="12" rx="1"/><path d="M3 9h18M12 9v12"/><path d="M12 9c-2-4-6-4-6-1 0 1 1 1 3 1Z"/><path d="M12 9c2-4 6-4 6-1 0 1-1 1-3 1Z"/>',
-  phone:       '<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 19h2"/>',
-  bulb:        '<path d="M9 18h6M10 22h4"/><path d="M12 2a6 6 0 0 0-4 10.5c.6.6 1 1.5 1 2.5h6c0-1 .4-1.9 1-2.5A6 6 0 0 0 12 2Z"/>',
-  ball:        '<circle cx="12" cy="12" r="9"/><path d="M12 7l3.5 2.5-1.3 4H9.8l-1.3-4Z"/><path d="M12 3v4M4.5 8.5l2.9 2M19.5 8.5l-2.9 2M6.5 19l1.8-4.5M17.5 19l-1.8-4.5"/>',
-  graduation:  '<path d="M2 9l10-5 10 5-10 5-10-5Z"/><path d="M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/><path d="M22 9v6"/>',
-  bank:        '<path d="M3 10h18M4 10v9M9 10v9M15 10v9M20 10v9M3 21h18"/><path d="M12 3 2 9h20Z"/>',
-  card:        '<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/>',
-  piggy:       '<ellipse cx="12" cy="13" rx="8" ry="5"/><path d="M8 8V6M18 12l2 1-2 1Z"/><path d="M7 18v2M17 18v2"/><circle cx="15" cy="11" r=".8"/>',
-  coin:        '<circle cx="12" cy="12" r="9"/><path d="M12 7v10"/><path d="M15 9.5c0-1.4-1.3-2.5-3-2.5s-3 1-3 2.3c0 3 6 1.4 6 4.4 0 1.4-1.3 2.5-3 2.5s-3-1-3-2.3"/>',
-  cash:        '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9v.01M18 15v.01"/>',
-  wallet:      '<path d="M3 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2h1a1 1 0 0 1 1 1v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><circle cx="16" cy="13" r="1.2"/>',
-  bus:         '<rect x="3" y="5" width="18" height="11" rx="2"/><path d="M3 11h18M6 8h4M14 8h4"/><circle cx="7" cy="18" r="1.5"/><circle cx="17" cy="18" r="1.5"/>',
-  bike:        '<circle cx="6" cy="17" r="3.5"/><circle cx="18" cy="17" r="3.5"/><path d="M6 17 10 8h4l4 9M10 8h3"/>',
-  energy:      '<path d="M13 2 4 14h6l-1 8 9-12h-6Z"/>',
-  water:       '<path d="M12 2c4 5 7 9 7 13a7 7 0 0 1-14 0c0-4 3-8 7-13Z"/>',
-  wifi:        '<path d="M2 9a15 15 0 0 1 20 0M5.5 13a10 10 0 0 1 13 0M9 17a5 5 0 0 1 6 0"/><path d="M12 20h.01"/>',
-  flame:       '<path d="M12 2c1 3-2 4-2 7a4 4 0 0 0 8 0c0-1-.5-2-1-2 .5 3-1 5-3 5a4 4 0 0 1-4-4c0-3 2-4 2-6Z"/>',
-  building:    '<rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 8h.01M15 8h.01M9 12h.01M15 12h.01M9 16h.01M15 16h.01"/><path d="M9 21v-4h6v4"/>',
-  tv:          '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/><path d="M10 9l5 3-5 3Z"/>',
-  film:        '<path d="M3 8l3-4M8 8l3-4M13 8l3-4"/><rect x="3" y="8" width="18" height="12" rx="1"/>',
-  music:       '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',
-  tool:        '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2-2Z"/>',
-  shield:      '<path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5Z"/>',
-  document:    '<path d="M6 2h9l5 5v15H6Z"/><path d="M15 2v5h5"/><path d="M9 13h6M9 17h6"/>',
-  briefcase:   '<rect x="2" y="7" width="20" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M2 12h20"/>',
-  users:       '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M14.5 20c.2-3 2-5.3 4.5-5.9"/>',
-  star:        '<path d="m12 2 3 6.5 7 .9-5 4.9 1.2 7-6.2-3.4L5.8 21.3 7 14.3 2 9.4l7-.9Z"/>',
-  cart:        '<circle cx="9" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/><path d="M2 3h2l2.5 12h11L20 7H6"/>',
-  dumbbell:    '<path d="M4 9v6M2 10v4M20 9v6M22 10v4M7 12h10M7 9v6M17 9v6"/>',
-};
-const ICON_KEYS = Object.keys(ICON_LIB);
-const ICON_LABELS = {
-  home:'Casa', food:'Alimentação', car:'Carro', pill:'Saúde', game:'Jogos', book:'Livros', box:'Caixa/Outros',
-  shirt:'Roupas', plane:'Viagem', paw:'Pet', gift:'Presente', phone:'Celular', bulb:'Energia/Ideia', ball:'Esporte',
-  graduation:'Educação', bank:'Banco', card:'Cartão', piggy:'Poupança', coin:'Dinheiro', cash:'Dinheiro (nota)',
-  wallet:'Carteira', bus:'Ônibus', bike:'Bicicleta', energy:'Energia elétrica', water:'Água', wifi:'Internet',
-  flame:'Gás/Fogo', building:'Condomínio/Prédio', tv:'Streaming', film:'Cinema', music:'Música', tool:'Manutenção',
-  shield:'Seguro', document:'Documento', briefcase:'Trabalho', users:'Família', star:'Favorito', cart:'Compras', dumbbell:'Academia',
-};
-// Compatibilidade: categorias/contas/cartões já cadastrados usam emoji — mapeamos automaticamente para o ícone flat equivalente.
-const LEGACY_EMOJI_MAP = {
-  '🏠':'home', '🍽️':'food', '🚗':'car', '💊':'pill', '🎮':'game', '📚':'book', '📦':'box', '👕':'shirt',
-  '✈️':'plane', '🐾':'paw', '🎁':'gift', '📱':'phone', '💡':'bulb', '⚽':'ball', '🎓':'graduation',
-  '🏦':'bank', '💳':'card', '💰':'coin', '👛':'wallet', '🐷':'piggy', '🪙':'coin', '💵':'cash', '🏧':'bank',
-  '🟣':'card', '🔵':'card', '⚫':'card', '🟠':'card', '🔴':'card', '🟡':'card',
-};
-function resolveIconKey(raw, fallback){
-  if(raw && ICON_LIB[raw]) return raw;
-  if(raw && LEGACY_EMOJI_MAP[raw]) return LEGACY_EMOJI_MAP[raw];
-  return fallback;
-}
-function iconSvgMarkup(key, size){
-  size = size || 18;
-  const body = ICON_LIB[key] || ICON_LIB.box;
-  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
-}
-function entityIconHtml(raw, fallback, size){
-  return iconSvgMarkup(resolveIconKey(raw, fallback||'box'), size);
-}
-function iconTextInline(raw, fallback, texto, size){
-  return `<span style="display:inline-flex; align-items:center; gap:5px;">${entityIconHtml(raw, fallback, size||14)}${texto}</span>`;
-}
-function iconPickerHtml(pickerId, selectedKey){
-  return `<div class="icon-picker" id="${pickerId}" data-selected="${selectedKey}">
-    ${ICON_KEYS.map(k=>`<button type="button" class="icon-opt ${k===selectedKey?'selected':''}" data-icon-key="${k}" title="${ICON_LABELS[k]||k}">${iconSvgMarkup(k,20)}</button>`).join('')}
-  </div>`;
-}
-function wireIconPicker(pickerId){
-  const wrap = document.getElementById(pickerId);
-  if(!wrap) return;
-  wrap.querySelectorAll('.icon-opt').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      wrap.querySelectorAll('.icon-opt').forEach(b=>b.classList.remove('selected'));
-      btn.classList.add('selected');
-      wrap.dataset.selected = btn.dataset.iconKey;
-    });
-  });
-}
-function iconPickerValue(pickerId){
-  const wrap = document.getElementById(pickerId);
-  return wrap ? wrap.dataset.selected : null;
-}
-
+ 
 /* ---------- helpers ---------- */
 const BRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
 const fmt = v => BRL.format(Number(v)||0);
@@ -862,12 +760,12 @@ async function seedIfEmpty(){
   setTimeout(async ()=>{
     if(state.categorias.length===0){
       const defaults = [
-        {nome:'Casa', cor:'#5b9dff', icone:'home', subcategorias:['Energia','Água','Internet','Gás','Condomínio','Aluguel']},
-        {nome:'Alimentação', cor:'#ffc24b', icone:'food', subcategorias:['Mercado','Restaurante','Delivery']},
-        {nome:'Transporte', cor:'#2fe0a8', icone:'car', subcategorias:['Combustível','Uber/Táxi','Manutenção','Estacionamento']},
-        {nome:'Saúde', cor:'#ff6b81', icone:'pill', subcategorias:['Plano de saúde','Farmácia','Consultas']},
-        {nome:'Lazer', cor:'#b98cff', icone:'game', subcategorias:['Streaming','Cinema','Viagens','Hobbies']},
-        {nome:'Outros', cor:'#9ba0c2', icone:'box', subcategorias:['Diversos']},
+        {nome:'Casa', cor:'#5b9dff', icone:'🏠', subcategorias:['Energia','Água','Internet','Gás','Condomínio','Aluguel']},
+        {nome:'Alimentação', cor:'#ffc24b', icone:'🍽️', subcategorias:['Mercado','Restaurante','Delivery']},
+        {nome:'Transporte', cor:'#2fe0a8', icone:'🚗', subcategorias:['Combustível','Uber/Táxi','Manutenção','Estacionamento']},
+        {nome:'Saúde', cor:'#ff6b81', icone:'💊', subcategorias:['Plano de saúde','Farmácia','Consultas']},
+        {nome:'Lazer', cor:'#b98cff', icone:'🎮', subcategorias:['Streaming','Cinema','Viagens','Hobbies']},
+        {nome:'Outros', cor:'#9ba0c2', icone:'📦', subcategorias:['Diversos']},
       ];
       for(const c of defaults) await addDoc(catCol, c);
     }
@@ -892,7 +790,7 @@ async function seedIfEmpty(){
       for(const nome of ['Débito automático','Cartão de crédito','PIX','Boleto','Dinheiro']) await addDoc(collection(db,'formasPagamento'), {nome});
     }
     if(state.contas.length===0){
-      await addDoc(collection(db,'contas'), {nome:'Conta Principal', cor:'#2fe0a8', icone:'bank', saldoInicial:0});
+      await addDoc(collection(db,'contas'), {nome:'Conta Principal', cor:'#2fe0a8', icone:'🏦', saldoInicial:0});
     }
   }, 900);
 }
@@ -1088,14 +986,14 @@ function expenseRowHtml(d, isCardItem){
   const forma = byId(state.formas, d.formaPagamentoId);
   return `
     <div class="expense-row">
-      <div class="icon-badge" style="background:${cat?cat.cor+'22':'#33385522'}">${entityIconHtml(cat?cat.icone:null, 'card')}</div>
+      <div class="icon-badge" style="background:${cat?cat.cor+'22':'#33385522'}">${cat?cat.icone:'💳'}</div>
       <div class="exp-main">
         <div class="desc">${d.descricao||''}</div>
         <div class="exp-tags">
           ${cat?`<span class="tag">${cat.nome}${d.subcategoria?' • '+d.subcategoria:''}</span>`:''}
           ${tipo?`<span class="tag">${tipo.nome}</span>`:''}
           ${classe?`<span class="tag">${classe.nome}</span>`:''}
-          ${!isCardItem && conta?`<span class="tag">${iconTextInline(conta.icone,'bank',conta.nome,12)}</span>`:''}
+          ${!isCardItem && conta?`<span class="tag">${conta.icone||''} ${conta.nome}</span>`:''}
           ${forma?`<span class="tag">${forma.nome}</span>`:''}
           ${d.parcelamentoId?`<span class="tag parcela">Parcela ${d.parcelaAtual}/${d.parcelaTotal}</span>`:''}
           ${d.antecipada?`<span class="tag antecipada">Antecipada de ${monthLabel(d.mesOriginal)}</span>`:''}
@@ -1129,7 +1027,7 @@ function invoiceRowHtml(cartaoId, mes){
   return `
     <div class="invoice-row ${isOpen?'open':''}" data-invoice="${key}">
       <div class="invoice-head" data-toggle-invoice="${key}">
-        <div class="icon-badge" style="background:${(cartao.cor||'#b98cff')+'22'}">${entityIconHtml(cartao.icone,'card')}</div>
+        <div class="icon-badge" style="background:${(cartao.cor||'#b98cff')+'22'}">${cartao.icone||'💳'}</div>
         <div class="exp-main">
           <div class="desc">Fatura ${cartao.nome}</div>
           <div class="exp-tags"><span class="tag">${itens.length} compra${itens.length!==1?'s':''}</span>${cartao.diaVencimento?`<span class="tag">vence dia ${cartao.diaVencimento}</span>`:''}</div>
@@ -1326,7 +1224,7 @@ function renderRanking(){
     let key, label, cor;
     if(dim==='categoria'){
       const cat = byId(state.categorias, d.categoriaId);
-      key = d.categoriaId || '_sem'; label = cat?(iconTextInline(cat.icone,'box',cat.nome,13)):'Sem categoria'; cor = cat?cat.cor:'#666b8c';
+      key = d.categoriaId || '_sem'; label = cat?(cat.icone+' '+cat.nome):'Sem categoria'; cor = cat?cat.cor:'#666b8c';
     } else if(dim==='subcategoria'){
       const cat = byId(state.categorias, d.categoriaId);
       key = (d.categoriaId||'_sem')+'|'+(d.subcategoria||'');
@@ -1566,10 +1464,10 @@ function renderReceitas(){
     }).sort((a,b)=>b.totalGrupo-a.totalGrupo);
     const rows = grupos.map(g=>{
       const conta = byId(state.contas, g.contaId);
-      const contaLabel = conta ? iconTextInline(conta.icone,'bank',conta.nome,13) : 'Sem conta';
+      const contaLabel = conta ? (conta.icone+' '+conta.nome) : 'Sem conta';
       const itensHtml = g.itens.map(r=>`
       <div class="expense-row">
-        <div class="icon-badge" style="background:var(--emerald-dim)">${iconSvgMarkup('coin',18)}</div>
+        <div class="icon-badge" style="background:var(--emerald-dim)">💰</div>
         <div class="exp-main">
           <div class="desc">${r.descricao||''}</div>
           <div class="exp-tags"><span class="tag">${contaLabel}</span></div>
@@ -1633,7 +1531,7 @@ function renderContas(){
     return `
     <div class="account-card">
       <div class="top">
-        <div class="icon-badge" style="background:${(c.cor||'#2fe0a8')+'22'}">${entityIconHtml(c.icone,'bank')}</div>
+        <div class="icon-badge" style="background:${(c.cor||'#2fe0a8')+'22'}">${c.icone||'🏦'}</div>
         <div class="name">${c.nome}</div>
       </div>
       <div class="saldo mono" style="color:${saldo>=0?'var(--emerald)':'var(--rose)'}">${fmt(saldo)}</div>
@@ -1679,7 +1577,7 @@ function renderCartoes(){
     return `
     <div class="account-card">
       <div class="top">
-        <div class="icon-badge" style="background:${(c.cor||'#b98cff')+'22'}">${entityIconHtml(c.icone,'card')}</div>
+        <div class="icon-badge" style="background:${(c.cor||'#b98cff')+'22'}">${c.icone||'💳'}</div>
         <div class="name">${c.nome}</div>
       </div>
       <div class="saldo mono" style="color:var(--rose)">${fmt(totalMesAtual)}</div>
@@ -1694,7 +1592,7 @@ function renderCartoes(){
       `}
  
       <div style="color:var(--text-muted); font-size:11.5px; margin-top:10px;">
-        ${contaVinculada?`Débito em: ${iconTextInline(contaVinculada.icone,'bank',contaVinculada.nome,12)}<br>`:''}
+        ${contaVinculada?`Débito em: ${contaVinculada.icone||''} ${contaVinculada.nome}<br>`:''}
         ${c.diaFechamento?`Fecha dia ${c.diaFechamento} · `:''}${c.diaVencimento?`Vence dia ${c.diaVencimento}`:''}
       </div>
  

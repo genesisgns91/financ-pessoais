@@ -439,11 +439,47 @@
     nav.tabs .nav-ico{ display:flex; } nav.tabs .nav-ico svg{ width:19px; height:19px; }
     nav.tabs button.active{ background:linear-gradient(90deg,var(--emerald-dim),transparent); color:var(--emerald); box-shadow:inset 3px 0 0 var(--emerald); }
   }
-  @media(min-width:1280px){
-    #mesesContainer,#receitasContainer{ display:grid; grid-template-columns:repeat(auto-fill,minmax(520px,1fr)); gap:14px; align-items:start; }
-    #mesesContainer .month-card,#receitasContainer .month-card{ margin-bottom:0; }
-  }
   @media(prefers-reduced-motion:reduce){ *{ transition:none !important; animation:none !important; } }
+
+  /* ===== Acabamento: lista, alinhamento, fundo texturizado ===== */
+  .container{ position:relative; z-index:1; }
+  body::after{ content:""; position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.07; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+  .card{ background:linear-gradient(180deg,rgba(27,32,49,.82),rgba(21,25,39,.82)); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+  .month-card,.account-card{ background:rgba(22,26,40,.84); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+  .mono{ font-variant-numeric:tabular-nums; }
+  .btn,.seg-btn,.status-btn,.tag,.stat .k,.badge-atual,.tab-nav-sm button,.balance-pill,.check-row label,nav.tabs button span{ white-space:nowrap; }
+  .btn-sm{ padding:9px 16px; font-size:13px; min-height:38px; }
+  .btn-icon{ padding:8px; }
+  input,select,textarea{ padding:11px 14px; }
+  .status-btn{ padding:6px 12px; font-size:11px; min-width:132px; text-align:center; box-sizing:border-box; }
+  .seg-btn{ flex:1 1 auto; padding:9px 14px; }
+  .segmented{ gap:4px; }
+  .view-head{ grid-column:1/-1; order:-1; margin:2px 0 18px; }
+  .view-head h2{ font-family:'Sora',sans-serif; font-weight:800; font-size:26px; letter-spacing:-.02em; margin:0; }
+  .view-head p{ margin:4px 0 0; color:var(--text-muted); font-size:13.5px; }
+  .accounts-grid{ grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); }
+  #view-dashboards.active{ align-items:stretch; }
+  #view-dashboards .card{ display:flex; flex-direction:column; }
+  #view-dashboards .card > div[style*="position:relative"]{ flex:1; min-height:300px; height:auto !important; overflow:hidden; }
+  #dashComprometBody{ display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:14px; }
+  #dashComprometBody .dual-month{ margin:0; padding:14px 16px; border:1px solid var(--border-soft); border-radius:14px; background:rgba(32,36,58,.45); }
+  #dashComprometBody .dual-month.is-current{ border-color:var(--emerald); }
+  #dashComprometBody .dual-month-head{ flex-direction:column; align-items:flex-start; gap:2px; }
+  #dashComprometBody .limit-row{ flex-wrap:wrap; gap:2px 12px; }
+  @media(min-width:721px){
+    .month-head{ padding:16px 22px; gap:20px; }
+    .month-stats{ gap:8px; flex-wrap:nowrap; }
+    .month-stats .stat{ width:136px; min-width:0; text-align:right; }
+    .month-body{ padding:8px 22px 20px; }
+    .expense-row{ padding:12px 10px; border-radius:12px; gap:16px; transition:background .15s; }
+    .expense-row:hover{ background:rgba(255,255,255,.03); }
+    .expense-row .exp-val{ width:132px; min-width:132px; }
+    .expense-row .exp-actions{ min-width:140px; justify-content:flex-end; }
+    .invoice-head{ padding:13px 16px; gap:16px; }
+    .invoice-head .exp-val{ width:132px; min-width:132px; }
+    .invoice-body{ padding:4px 16px 10px 62px; }
+  }
 </style>
 </head>
 <body>
@@ -2999,7 +3035,7 @@ function animarNumero(el,v){
   requestAnimationFrame(function f(t){ const p=Math.min((t-t0)/500,1), e=1-Math.pow(1-p,3); el.textContent=fmt(de+(v-de)*e); if(p<1) requestAnimationFrame(f); });
 }
 function organizarDashboards(){
-  const L=[['Resumo do período',12,0],['Renda × Gastos',8,1],['Gastos por categoria',4,2],['Análise por dimensão',12,3],['Comprometimento',6,4],['Orçamento por categoria',6,5],['Potencial de economia',6,6],['Regra 50/30/20',6,7],['Ranking de gastos',6,8],['Progressão',6,9]];
+  const L=[['Resumo do período',12,0],['Renda × Gastos',8,1],['Gastos por categoria',4,2],['Análise por dimensão',12,3],['Comprometimento',12,4],['Orçamento por categoria',6,5],['Potencial de economia',6,6],['Regra 50/30/20',6,7],['Ranking de gastos',6,8],['Progressão',12,9]];
   document.querySelectorAll('#view-dashboards > .card').forEach(c=>{
     const t=c.querySelector('.card-title').textContent;
     if(t.includes('Receitas x Despesas por mês')){ c.style.display='none'; return; }
@@ -3046,6 +3082,42 @@ function renderDim(){
 });
 if(window.Chart){ Chart.defaults.font.family="'Inter',sans-serif"; }
 organizarDashboards();
+
+
+/* ---------- Acabamento: títulos de seção e fundo interativo ---------- */
+const VT={despesas:['Despesas','Planeje e acompanhe o que já está comprometido, mês a mês'],receitas:['Receitas','O que entra e em qual conta'],contas:['Contas','Saldos reais, transferências e metas'],cartoes:['Cartões','Faturas, limites e parcelamentos'],dashboards:['Dashboard','Visão completa da sua vida financeira'],config:['Configurações','Categorias, tipos, classes, IA e dados']};
+Object.entries(VT).forEach(([k,[t,d]])=>document.getElementById('view-'+k).insertAdjacentHTML('afterbegin',`<div class="view-head"><h2>${t}</h2><p>${d}</p></div>`));
+(function(){
+  const cv=document.createElement('canvas');
+  cv.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none';
+  document.body.prepend(cv);
+  const x=cv.getContext('2d'), dpr=Math.min(window.devicePixelRatio||1,2), G=34, R=170;
+  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W=0,H=0,mx=-999,my=-999,t=0;
+  const blobs=[['52,227,176',.12,.08,.55,1],['192,155,255',.88,.05,.5,1.3],['106,168,255',.72,.96,.55,.9],['255,122,143',.04,.9,.4,1.15]];
+  function size(){ W=innerWidth; H=innerHeight; cv.width=W*dpr; cv.height=H*dpr; x.setTransform(dpr,0,0,dpr,0,0); }
+  addEventListener('resize',()=>{ size(); if(reduce) draw(); }); size();
+  addEventListener('pointermove',e=>{ mx=e.clientX; my=e.clientY; },{passive:true});
+  addEventListener('pointerleave',()=>{ mx=my=-999; });
+  function draw(){
+    t++; x.clearRect(0,0,W,H);
+    blobs.forEach(([c,bx,by,br,sp],i)=>{
+      const px=(bx+Math.sin(t*.0016*sp+i*2)*.1)*W, py=(by+Math.cos(t*.0013*sp+i)*.1)*H, r=br*Math.max(W,H)*.6;
+      const g=x.createRadialGradient(px,py,0,px,py,r); g.addColorStop(0,`rgba(${c},.11)`); g.addColorStop(1,`rgba(${c},0)`); x.fillStyle=g; x.fillRect(0,0,W,H);
+    });
+    x.fillStyle='rgba(155,160,194,.13)';
+    for(let gx=G/2;gx<W;gx+=G) for(let gy=G/2;gy<H;gy+=G) x.fillRect(gx-.6,gy-.6,1.2,1.2);
+    if(mx>0){
+      const i0=Math.floor((mx-R)/G), i1=Math.ceil((mx+R)/G), j0=Math.floor((my-R)/G), j1=Math.ceil((my+R)/G);
+      for(let i=i0;i<=i1;i++) for(let j=j0;j<=j1;j++){
+        const gx=i*G+G/2, gy=j*G+G/2, k=1-Math.hypot(gx-mx,gy-my)/R; if(k<=0) continue;
+        x.fillStyle=`rgba(52,227,176,${.12+k*.6})`; x.beginPath(); x.arc(gx,gy,1+k*2,0,6.283); x.fill();
+      }
+    }
+    if(!reduce) requestAnimationFrame(draw);
+  }
+  draw();
+})();
 
 openMonths.add(todayKey());
 initDashboards();

@@ -2574,7 +2574,7 @@ function contextoIA(){
   const nomeDe=(arr,id)=>(byId(arr,id)||{}).nome||'';
   const hist=new Map();
   state.despesas.slice().sort((a,b)=>monthOrder(b.mes)-monthOrder(a.mes)).forEach(d=>{
-    const k=(d.descricao||'').replace(/\s*\(\d+\/\d+\)$/,'').toLowerCase(); if(!k||hist.has(k)||hist.size>=150) return;
+    const k=(d.descricao||'').replace(/\s*\(\d+\/\d+\)$/,'').toLowerCase(); if(!k||hist.has(k)||hist.size>=100) return;
     hist.set(k,[nomeDe(state.categorias,d.categoriaId),d.subcategoria||'',d.essencialidade||'',nomeDe(state.classes,d.classeId),nomeDe(state.tipos,d.tipoId)]);
   });
   return {hoje:hojeISO(),
@@ -2592,32 +2592,44 @@ Com certeza, responda {"lancamento":{"descricao":"","valor":0,"valorTipo":"total
 Regras: use SOMENTE ids do contexto; use o histórico para classificar estabelecimentos pelo nome (ex.: um nome de supermercado já lançado como Mercado), mesmo sem a palavra "mercado"; datas relativas (ontem, sexta) partem de "hoje"; "Visa", "Nubank" etc. devem casar com o nome do cartão cadastrado; mercado, farmácia e contas da casa costumam ser essenciais; lazer, delivery e streaming costumam ser reduzíveis ou supérfluos.
 CONTEXTO: ${JSON.stringify(contextoIA())}`;
 }
+function maiorString(o,d=0){
+  if(typeof o==='string') return o;
+  if(!o||typeof o!=='object'||d>4) return '';
+  let best=''; for(const v of Object.values(o)){ const t=maiorString(v,d+1); if(t.length>best.length) best=t; } return best;
+}
 function extrairTextoIA(j){
   if(typeof j==='string') return j;
-  const c=j?.choices?.[0]?.message?.content ?? j?.reply ?? j?.response ?? j?.text ?? j?.output ?? j?.content ?? j?.message ?? j?.answer;
+  const c=j?.choices?.[0]?.message?.content ?? j?.candidates?.[0]?.content?.parts?.[0]?.text ?? j?.reply ?? j?.response ?? j?.text ?? j?.output ?? j?.content ?? j?.message ?? j?.answer ?? j?.resposta ?? j?.result ?? j?.resultado;
   if(Array.isArray(c)) return c.map(b=>b.text||'').join('');
-  return typeof c==='string'?c:(c?JSON.stringify(c):null);
+  if(typeof c==='string') return c;
+  return maiorString(c!=null?c:j);
 }
 async function tentarWorker(url,body,ms){
   const ac=new AbortController(), t=setTimeout(()=>ac.abort(),ms);
   try{
     const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:ac.signal});
     const raw=await r.text();
-    if(!r.ok) throw new Error('HTTP '+r.status+' '+raw.slice(0,100));
+    if(!r.ok) throw new Error('HTTP '+r.status+' '+raw.slice(0,90));
     let j; try{ j=JSON.parse(raw); }catch(_){ j=raw; }
+    const direto=[j,j&&j.response,j&&j.result,j&&j.data].find(x=>x&&typeof x==='object'&&(x.lancamento||x.perguntas));
+    if(direto) return direto;
     const txt=extrairTextoIA(j)||''; const a=txt.indexOf('{'), b=txt.lastIndexOf('}');
-    if(a<0||b<a) throw new Error('resposta sem JSON: '+(txt||raw).slice(0,100));
+    if(a<0||b<a) throw new Error('resposta sem JSON: '+(txt||raw).slice(0,90));
     return JSON.parse(txt.slice(a,b+1));
   }catch(e){ throw new Error(e.name==='AbortError'?'tempo esgotado':e.message); }
   finally{ clearTimeout(t); }
 }
 async function chamarIA(messages){
-  const prompt=messages.map(m=>m.role.toUpperCase()+': '+m.content).join('\n\n');
-  const formatos=[['messages',{messages}],['prompt',{prompt}],['message',{message:prompt}],['model+messages',{model:'gpt-4o-mini',messages}]];
+  const conversa=messages.slice(1).map(m=>(m.role==='user'?'USUÁRIO: ':'ASSISTENTE: ')+m.content).join('\n\n');
+  const formatos=[
+    ['prompt',{prompt:messages[0].content+'\n\n'+conversa+'\n\nResponda apenas com o JSON.'}],
+    ['prompt+system',{system:messages[0].content,prompt:conversa}],
+    ['messages',{messages}]
+  ];
   const erros=[];
   for(const [nome,body] of formatos){
     try{
-      return await Promise.any(PROXIES_WORKERS.map(u=>tentarWorker(u,body,15000).catch(e=>{ erros.push(nome+' | '+new URL(u).hostname.split('.')[0]+': '+e.message); throw e; })));
+      return await Promise.any(PROXIES_WORKERS.map(u=>tentarWorker(u,body,20000).catch(e=>{ erros.push(nome+' | '+new URL(u).hostname.split('.')[0]+': '+e.message); throw e; })));
     }catch(_){ /* tenta o próximo formato de corpo */ }
   }
   const err=new Error('nenhuma worker respondeu'); err.detalhes=erros; throw err;
@@ -2640,7 +2652,7 @@ function openIAModal(){
       if(r.perguntas&&r.perguntas.length){ resp.innerHTML='🤔 Preciso confirmar:<br>'+r.perguntas.map(p=>'• '+esc(p)).join('<br>'); ta.value=''; ta.placeholder='Responda aqui…'; ta.focus(); }
       else if(r.lancamento){ closeModal(); aplicarLancamentoIA(r.lancamento); }
       else throw new Error('resposta inesperada');
-    }catch(e){ resp.innerHTML='Não consegui interpretar ('+esc(e.message)+'). Reescreva ou use "Nova despesa".'+(e.detalhes?'<br><small style="color:var(--text-muted)">Detalhes técnicos:<br>'+e.detalhes.slice(-8).map(esc).join('<br>')+'</small>':''); }
+    }catch(e){ resp.innerHTML='Não consegui interpretar ('+esc(e.message)+'). Reescreva ou use "Nova despesa".'+(e.detalhes?'<br><small style="color:var(--text-muted)">Detalhes técnicos:<br>'+e.detalhes.slice(0,12).map(esc).join('<br>')+'</small>':''); }
     btn.disabled=false;
   });
 }

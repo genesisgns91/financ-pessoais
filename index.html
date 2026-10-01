@@ -706,6 +706,11 @@
         <button class="btn btn-danger-outline" id="btnLogout">Sair da conta</button>
         <input type="file" id="fileImport" accept=".json" hidden>
       </div>
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border-soft);">
+        <div class="card-title" style="color:var(--rose);">⚠️ Zona de perigo</div>
+        <div class="dash-hint">Apaga os dados salvos e recomeça do zero. Exporte um backup antes se houver qualquer chance de precisar deles.</div>
+        <button class="btn btn-danger-outline" id="btnLimparTudo">Apagar todos os dados e recomeçar</button>
+      </div>
     </div>
   </section>
  
@@ -729,7 +734,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, addDoc, updateDoc, deleteDoc,
+  initializeFirestore, getDocs, writeBatch, persistentLocalCache, persistentMultipleTabManager, collection, doc, addDoc, updateDoc, deleteDoc,
   onSnapshot, setDoc, getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
  
@@ -2894,6 +2899,45 @@ document.getElementById('btnIASalvar').addEventListener('click',async()=>{
   const g=id=>document.getElementById(id);
   await setDoc(doc(db,'meta','ia'),{regras:g('iaRegras').value.trim(),padroes:{pagarCom:g('iaPagarCom').value,contaDebito:g('iaContaDeb').value,cartaoCredito:g('iaCartaoCred').value},atualizadoEm:Date.now()});
   toast('Padrões e regras da IA salvos.');
+});
+
+
+/* ---------- Zona de perigo: apagar tudo ---------- */
+async function apagarColecao(nome){
+  const snap=await getDocs(collection(db,nome)); let b=writeBatch(db), n=0;
+  for(const d of snap.docs){ b.delete(d.ref); if(++n%400===0){ await b.commit(); b=writeBatch(db); } }
+  if(n%400!==0) await b.commit();
+}
+async function executarLimpeza(manter){
+  const lanc=['despesas','receitas','transferencias','metas'], cfg=['categorias','tipos','classes','formasPagamento','contas','cartoes'];
+  for(const c of (manter?lanc:[...lanc,...cfg])) await apagarColecao(c);
+  await deleteDoc(doc(db,'meta','ia')).catch(()=>{});
+  if(manter) await setDoc(doc(db,'meta','geral'),{mesesRetroativos:[],seeded:true});
+  else await deleteDoc(doc(db,'meta','geral'));
+}
+document.getElementById('btnLimparTudo').addEventListener('click',()=>{
+  openModal(`<div class="modal-head"><h3>⚠️ Apagar todos os dados?</h3><button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
+    <div class="pagar-com-note" style="display:block;">Isso apaga <strong>permanentemente</strong> despesas, receitas, parcelas, transferências, metas e as regras da IA. Não dá para desfazer. Você realmente deseja fazer isso?</div>
+    <div class="check-row" style="margin-top:12px;align-items:flex-start;"><input type="checkbox" id="fManter" style="margin-top:3px;"><label style="margin:0;" for="fManter">Manter categorias, tipos, classes, formas de pagamento, contas e cartões (apagar só os lançamentos)</label></div>
+    <div class="modal-actions"><button class="btn btn-ghost" id="mNao">Não, cancelar</button><button class="btn btn-danger-outline" id="mSim">Sim, continuar</button></div>`);
+  document.getElementById('mClose').addEventListener('click',closeModal);
+  document.getElementById('mNao').addEventListener('click',closeModal);
+  document.getElementById('mSim').addEventListener('click',()=>{
+    const manter=document.getElementById('fManter').checked, email=(auth.currentUser&&auth.currentUser.email)||'';
+    openModal(`<div class="modal-head"><h3>Confirme seu e-mail</h3><button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
+      <div class="pagar-com-note" style="display:block;">Para confirmar, digite o e-mail da sua conta: <strong>${esc(email)}</strong></div>
+      <div class="field full" style="margin-top:12px;"><label>E-mail</label><input id="fEmailConf" type="email" autocomplete="off" placeholder="seu@email.com"></div>
+      <div class="modal-actions"><button class="btn btn-ghost" id="mNao">Cancelar</button><button class="btn btn-danger-outline" id="mApagar" disabled style="opacity:.5;">Apagar tudo</button></div>`);
+    const inp=document.getElementById('fEmailConf'), ok=document.getElementById('mApagar');
+    document.getElementById('mClose').addEventListener('click',closeModal);
+    document.getElementById('mNao').addEventListener('click',closeModal);
+    inp.addEventListener('input',()=>{ const v=email&&inp.value.trim().toLowerCase()===email.toLowerCase(); ok.disabled=!v; ok.style.opacity=v?1:.5; });
+    ok.addEventListener('click',async()=>{
+      ok.disabled=true; ok.textContent='Apagando…';
+      try{ await executarLimpeza(manter); toast('Dados apagados. Recomeçando…'); setTimeout(()=>location.reload(),900); }
+      catch(e){ toast('Erro ao apagar: '+(e.code||e.message)); ok.disabled=false; ok.textContent='Apagar tudo'; }
+    });
+  });
 });
 
 openMonths.add(todayKey());

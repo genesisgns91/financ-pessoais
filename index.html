@@ -660,6 +660,7 @@
       <button data-cfg="tipos">Tipos</button>
       <button data-cfg="classes">Classes</button>
       <button data-cfg="formas">Formas de pagamento</button>
+      <button data-cfg="ia">IA e padrões</button>
       <button data-cfg="dados">Backup e conta</button>
     </div>
     <div class="card cfg-view active" id="cfg-categorias">
@@ -681,6 +682,21 @@
       <div class="row-between"><div class="card-title" style="margin:0;">Formas de pagamento</div>
         <button class="btn btn-primary btn-sm" id="btnNovaForma">+ Forma</button></div>
       <div id="formasList" style="margin-top:14px;"></div>
+    </div>
+    <div class="card cfg-view" id="cfg-ia" style="display:none;">
+      <div class="card-title">🧠 IA — padrões e perfil de gastos</div>
+      <div class="dash-hint">Defina o que a IA deve assumir quando você não disser. Clique em "Analisar meus gastos" para ela estudar todo o seu histórico e sugerir os padrões e as regras; revise, edite e salve. O lançamento inteligente lê isto antes de preencher.</div>
+      <div class="form-grid">
+        <div class="field full"><label>Pagar com (quando eu não disser nada)</label><select id="iaPagarCom"></select></div>
+        <div class="field"><label>Conta para "débito / pix / dinheiro" sem detalhar</label><select id="iaContaDeb"></select></div>
+        <div class="field"><label>Cartão para "crédito" sem detalhar</label><select id="iaCartaoCred"></select></div>
+        <div class="field full"><label>Perfil de gastos e regras de preenchimento (a IA lê e você pode editar)</label><textarea id="iaRegras" rows="12" placeholder="Ex: Supermercados (Jacomar, Condor…) = Alimentação/Mercado, essencial, pago no Visa…"></textarea></div>
+      </div>
+      <div class="pagar-com-note" id="iaStatus" style="display:block;margin-top:10px;"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+        <button class="btn btn-primary" id="btnIAAnalisar">🧠 Analisar meus gastos</button>
+        <button class="btn btn-ghost" id="btnIASalvar">Salvar padrões e regras</button>
+      </div>
     </div>
     <div class="card cfg-view" id="cfg-dados" style="display:none;">
       <div class="card-title">Backup e conta</div>
@@ -732,7 +748,7 @@ const auth = getAuth(app);
 /* ---------- estado em memória ---------- */
 const state = {
   categorias: [], tipos: [], classes: [], contas: [], formas: [], cartoes: [],
-  despesas: [], receitas: [], transferencias: [], metas: [], config: { mesesRetroativos: [] }
+  despesas: [], receitas: [], transferencias: [], metas: [], ia: {}, config: { mesesRetroativos: [] }
 };
 const openMonths = new Set();
 const openInvoices = new Set();
@@ -874,6 +890,7 @@ function listen(colName, stateKey, renderFn){
 }
  
 function startListeners(){
+onSnapshot(doc(db,'meta','ia'), snap=>{ state.ia = snap.exists()? snap.data() : {}; renderConfigIA(); });
 onSnapshot(doc(db,'meta','geral'), snap=>{
   state.config = snap.exists()? snap.data() : {mesesRetroativos:[]};
   renderDespesas();
@@ -2458,6 +2475,7 @@ document.querySelectorAll('.tab-nav-sm button').forEach(btn=>{
     btn.classList.add('active');
     document.querySelectorAll('.cfg-view').forEach(v=>v.style.display='none');
     document.getElementById('cfg-'+btn.dataset.cfg).style.display='block';
+    if(btn.dataset.cfg==='ia') renderConfigIA();
   });
 });
 document.getElementById('btnAddMesRetro').addEventListener('click', openMesRetroModal);
@@ -2562,7 +2580,7 @@ document.getElementById('fileImport').addEventListener('change',async e=>{
 
 /* ---------- Lançamento inteligente (IA via workers) ---------- */
 const PROXIES_WORKERS=["https://astro2.genesisgns.workers.dev/","https://mamoot-gpt-proxy.genesisgns.workers.dev/","https://astro-gns-proxy.genesisgns.workers.dev/","https://forzion-gpt-proxy.genesisgns.workers.dev/","https://shiny-sky-21dd.genesisgns.workers.dev/","https://interno.genesisgns.workers.dev/"];
-let iaIdx=0, iaMsgs=null;
+let iaIdx=0, iaMsgs=null, iaRodadas=0;
 const hojeISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 function mesFaturaCartao(c,iso){
   const [y,m,d]=iso.split('-').map(Number); let mes=`${y}-${String(m).padStart(2,'0')}`;
@@ -2577,7 +2595,7 @@ function contextoIA(){
     const k=(d.descricao||'').replace(/\s*\(\d+\/\d+\)$/,'').toLowerCase(); if(!k||hist.has(k)||hist.size>=100) return;
     hist.set(k,[nomeDe(state.categorias,d.categoriaId),d.subcategoria||'',d.essencialidade||'',nomeDe(state.classes,d.classeId),nomeDe(state.tipos,d.tipoId)]);
   });
-  return {hoje:hojeISO(),
+  return {hoje:hojeISO(), padroes:state.ia.padroes||{}, regras_do_usuario:(state.ia.regras||'').slice(0,6000),
     categorias:state.categorias.map(c=>({id:c.id,nome:c.nome,subs:c.subcategorias||[]})),
     tipos:state.tipos.map(t=>({id:t.id,nome:t.nome})), classes:state.classes.map(c=>({id:c.id,nome:c.nome})),
     contas:state.contas.map(c=>({id:'conta:'+c.id,nome:c.nome})),
@@ -2586,10 +2604,13 @@ function contextoIA(){
     historico_descricao__categoria_sub_essencialidade_classe_tipo:Object.fromEntries(hist)};
 }
 function promptIA(){
-  return `Você é o assistente de lançamentos de um app de finanças pessoais. Converta o texto do usuário em UMA despesa. Responda SOMENTE com JSON válido, sem texto fora do JSON.
-Se tiver QUALQUER dúvida relevante, responda {"perguntas":["..."]} (curtas e objetivas) em vez de adivinhar. Pergunte principalmente: se o valor é o total ou o valor de cada parcela (quando parcelado e não estiver claro); qual cartão/conta se não casar com os cadastrados; categoria/essencialidade se o estabelecimento não existir no histórico nem for óbvio.
-Com certeza, responda {"lancamento":{"descricao":"","valor":0,"valorTipo":"total|parcela","data":"YYYY-MM-DD","parcelas":1,"categoriaId":"","subcategoria":"","tipoId":"","classeId":"","essencialidade":"essencial|reduzivel|superfluo","pagarCom":"id de contas/cartoes do contexto","formaPagamentoId":""}}.
-Regras: use SOMENTE ids do contexto; use o histórico para classificar estabelecimentos pelo nome (ex.: um nome de supermercado já lançado como Mercado), mesmo sem a palavra "mercado"; datas relativas (ontem, sexta) partem de "hoje"; "Visa", "Nubank" etc. devem casar com o nome do cartão cadastrado; mercado, farmácia e contas da casa costumam ser essenciais; lazer, delivery e streaming costumam ser reduzíveis ou supérfluos.
+  return `Você é o assistente de lançamentos de um app de finanças pessoais. Converta o texto em UMA despesa. Responda SOMENTE com JSON válido, sem texto fora do JSON.
+PRIORIDADE: preencher SEM perguntar. Decida sozinho usando, nesta ordem: (1) "regras_do_usuario" e "padroes"; (2) o "historico" (descrição→categoria/sub/essencialidade/classe/tipo); (3) bom senso (farmácia→Saúde/Farmácia, supermercado→Alimentação/Mercado, mesmo que o nome do estabelecimento seja desconhecido).
+Quando faltar informação use os padrões: sem meio de pagamento → padroes.pagarCom; "débito/pix/dinheiro" sem conta → padroes.contaDebito; "crédito/cartão" sem nome → padroes.cartaoCredito; "Visa", "Nubank" etc. → cartão cadastrado com esse nome. Sem data → hoje. Parcelado com valor ambíguo → assuma que é o valor TOTAL. Essencialidade, classe e tipo: decida você.
+Só pergunte se for IMPOSSÍVEL decidir (sem padrão, sem histórico e sem como deduzir o meio de pagamento) — no máximo 1 pergunta.
+Sempre liste em "suposicoes" (curtas) o que você assumiu ou inferiu.
+Formatos: {"lancamento":{"descricao":"","valor":0,"valorTipo":"total|parcela","data":"YYYY-MM-DD","parcelas":1,"categoriaId":"","subcategoria":"","tipoId":"","classeId":"","essencialidade":"essencial|reduzivel|superfluo","pagarCom":"id de contas/cartoes do contexto","formaPagamentoId":"","suposicoes":["..."]}} ou {"perguntas":["..."]}.
+Use SOMENTE ids do contexto.
 CONTEXTO: ${JSON.stringify(contextoIA())}`;
 }
 function maiorString(o,d=0){
@@ -2635,7 +2656,7 @@ async function chamarIA(messages){
   const err=new Error('nenhuma worker respondeu'); err.detalhes=erros; throw err;
 }
 function openIAModal(){
-  iaMsgs=null;
+  iaMsgs=null; iaRodadas=0;
   openModal(`<div class="modal-head"><h3>✨ Lançamento inteligente</h3><button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
     <div class="field full"><label>Descreva o gasto com suas palavras</label><textarea id="iaTexto" rows="3" placeholder="Ex: ontem gastei 900 no Jacomar, paguei no Visa em 5x"></textarea></div>
     <div class="pagar-com-note" id="iaResp" style="display:block;margin-top:10px;">Eu preencho o formulário e você confere antes de salvar. Se eu tiver dúvida, pergunto.</div>
@@ -2645,11 +2666,12 @@ function openIAModal(){
   const ta=document.getElementById('iaTexto'), resp=document.getElementById('iaResp'), btn=document.getElementById('iaEnviar');
   btn.addEventListener('click',async()=>{
     const txt=ta.value.trim(); if(!txt) return;
-    if(!iaMsgs) iaMsgs=[{role:'system',content:promptIA()},{role:'user',content:txt}]; else iaMsgs.push({role:'user',content:txt});
+    const txtF=iaRodadas>0?txt+' (Não faça mais perguntas: preencha com sua melhor estimativa e registre em suposicoes.)':txt;
+    if(!iaMsgs) iaMsgs=[{role:'system',content:promptIA()},{role:'user',content:txtF}]; else iaMsgs.push({role:'user',content:txtF});
     resp.innerHTML='Interpretando…'; btn.disabled=true;
     try{
       const r=await chamarIA(iaMsgs); iaMsgs.push({role:'assistant',content:JSON.stringify(r)});
-      if(r.perguntas&&r.perguntas.length){ resp.innerHTML='🤔 Preciso confirmar:<br>'+r.perguntas.map(p=>'• '+esc(p)).join('<br>'); ta.value=''; ta.placeholder='Responda aqui…'; ta.focus(); }
+      if(r.perguntas&&r.perguntas.length){ iaRodadas++; resp.innerHTML='🤔 Preciso confirmar:<br>'+r.perguntas.map(p=>'• '+esc(p)).join('<br>'); ta.value=''; ta.placeholder='Responda aqui…'; ta.focus(); }
       else if(r.lancamento){ closeModal(); aplicarLancamentoIA(r.lancamento); }
       else throw new Error('resposta inesperada');
     }catch(e){ resp.innerHTML='Não consegui interpretar ('+esc(e.message)+'). Reescreva ou use "Nova despesa".'+(e.detalhes?'<br><small style="color:var(--text-muted)">Detalhes técnicos:<br>'+e.detalhes.slice(0,12).map(esc).join('<br>')+'</small>':''); }
@@ -2657,12 +2679,14 @@ function openIAModal(){
   });
 }
 function aplicarLancamentoIA(l){
+  if(!l.pagarCom && state.ia.padroes && state.ia.padroes.pagarCom) l.pagarCom=state.ia.padroes.pagarCom;
   const data=/^\d{4}-\d{2}-\d{2}$/.test(l.data)?l.data:hojeISO();
   const cartao=String(l.pagarCom||'').startsWith('cartao:')?byId(state.cartoes,l.pagarCom.split(':')[1]):null;
   const n=Math.max(1,Number(l.parcelas)||1);
   const mes=cartao?mesFaturaCartao(cartao,data):data.slice(0,7);
   const valor=l.valorTipo==='parcela'?Number(l.valor):round2(Number(l.valor)/n);
   openDespesaModal(null,mes);
+  if(Array.isArray(l.suposicoes)&&l.suposicoes.length) document.querySelector('#modalBox .modal-head').insertAdjacentHTML('afterend',`<div class="pagar-com-note" style="display:block;margin-bottom:10px;">🤖 Assumi: ${l.suposicoes.map(esc).join(' • ')}</div>`);
   const set=(id,v)=>{ const e=document.getElementById(id); if(!e||v==null||v==='') return; e.value=v; e.dispatchEvent(new Event('input')); e.dispatchEvent(new Event('change')); };
   set('fDesc',l.descricao); set('fCat',l.categoriaId); set('fSub',l.subcategoria); set('fTipo',l.tipoId); set('fClasse',l.classeId); set('fEss',l.essencialidade);
   set('fForma',l.formaPagamentoId); set('fPagarCom',l.pagarCom);
@@ -2818,6 +2842,59 @@ function openMetaModal(id){
 document.getElementById('btnTransf').addEventListener('click',openTransfModal);
 document.getElementById('btnNovaMeta').addEventListener('click',()=>openMetaModal(null));
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+
+/* ---------- IA: padrões e análise do histórico ---------- */
+function modaDe(arr){ const m=new Map(); arr.filter(Boolean).forEach(x=>m.set(x,(m.get(x)||0)+1)); const e=[...m.entries()].sort((a,b)=>b[1]-a[1])[0]; return e?e[0]:''; }
+function renderConfigIA(){
+  const g=id=>document.getElementById(id); if(!g('iaRegras')) return;
+  const p=state.ia.padroes||{};
+  const co=state.contas.map(c=>`<option value="conta:${c.id}">${esc(c.icone||'')} ${esc(c.nome)}</option>`).join('');
+  const ko=state.cartoes.map(c=>`<option value="cartao:${c.id}">${esc(c.icone||'💳')} ${esc(c.nome)}</option>`).join('');
+  g('iaPagarCom').innerHTML='<option value="">Sem padrão</option><optgroup label="Contas">'+co+'</optgroup><optgroup label="Cartões">'+ko+'</optgroup>';
+  g('iaContaDeb').innerHTML='<option value="">Sem padrão</option>'+co;
+  g('iaCartaoCred').innerHTML='<option value="">Sem padrão</option>'+ko;
+  g('iaPagarCom').value=p.pagarCom||''; g('iaContaDeb').value=p.contaDebito||''; g('iaCartaoCred').value=p.cartaoCredito||'';
+  g('iaRegras').value=state.ia.regras||'';
+  g('iaStatus').textContent=state.ia.atualizadoEm?'Última atualização: '+new Date(state.ia.atualizadoEm).toLocaleString('pt-BR'):'Ainda não analisado — clique em "Analisar meus gastos".';
+}
+function resumoGastos(){
+  const nm=(arr,id)=>(byId(arr,id)||{}).nome||'';
+  const g=new Map();
+  state.despesas.forEach(d=>{
+    const base=(d.descricao||'').replace(/\s*\(\d+\/\d+\)$/,'').trim(), k=normalizar(base); if(!k) return;
+    if(!g.has(k)) g.set(k,{base,its:[]}); g.get(k).its.push(d);
+  });
+  const linhas=[...g.values()].sort((a,b)=>b.its.length-a.its.length).slice(0,120).map(({base,its})=>{
+    const med=its.reduce((s,d)=>s+Number(d.valor||0),0)/its.length;
+    const pag=modaDe(its.map(d=>d.cartaoId?'Cartão '+nm(state.cartoes,d.cartaoId):(d.contaId?'Conta '+nm(state.contas,d.contaId):'')));
+    return [base,its.length+'x','R$'+med.toFixed(2),nm(state.categorias,modaDe(its.map(d=>d.categoriaId)))+'/'+modaDe(its.map(d=>d.subcategoria)),nm(state.tipos,modaDe(its.map(d=>d.tipoId))),nm(state.classes,modaDe(its.map(d=>d.classeId))),ESS[modaDe(its.map(d=>d.essencialidade))]||'-',pag].join(' | ');
+  });
+  const ct=new Map(); state.despesas.forEach(d=>{const n=nm(state.categorias,d.categoriaId)||'Sem categoria'; ct.set(n,(ct.get(n)||0)+Number(d.valor||0));});
+  return 'Colunas: descrição | ocorrências | valor médio | categoria/subcategoria | tipo | classe | essencialidade | pagamento mais usado\n'+linhas.join('\n')
+    +'\n\nTotal por categoria: '+[...ct.entries()].sort((a,b)=>b[1]-a[1]).map(([n,v])=>n+' R$'+v.toFixed(0)).join('; ')
+    +'\nContas: '+state.contas.map(c=>c.nome).join(', ')+'. Cartões: '+state.cartoes.map(c=>c.nome).join(', ')+'.';
+}
+document.getElementById('btnIAAnalisar').addEventListener('click',async()=>{
+  const g=id=>document.getElementById(id), st=g('iaStatus'), btn=g('btnIAAnalisar');
+  if(state.despesas.length<5){ toast('Lance mais despesas antes de analisar.'); return; }
+  const ds=state.despesas;
+  g('iaPagarCom').value=modaDe(ds.map(d=>d.cartaoId?'cartao:'+d.cartaoId:(d.contaId?'conta:'+d.contaId:'')));
+  const cd=modaDe(ds.filter(d=>!d.cartaoId).map(d=>d.contaId)), cc=modaDe(ds.map(d=>d.cartaoId));
+  g('iaContaDeb').value=cd?'conta:'+cd:''; g('iaCartaoCred').value=cc?'cartao:'+cc:'';
+  st.textContent='Padrões de pagamento preenchidos pelo histórico. A IA está estudando seus gastos…'; btn.disabled=true;
+  try{
+    const r=await chamarIA([{role:'system',content:'Você analisa o histórico de despesas de uma pessoa e escreve o PERFIL DE GASTOS e as REGRAS DE PREENCHIMENTO que outro assistente usará para lançar novas despesas com o mínimo de perguntas. Responda SOMENTE JSON: {"regras":"texto em tópicos curtos, uma regra por linha"}. Inclua: (1) mapa estabelecimento/palavra→categoria, subcategoria, tipo, classe e essencialidade (agrupe nomes parecidos, ex.: todos os supermercados); (2) padrões de pagamento (qual conta ou cartão por tipo de gasto, valores típicos); (3) essencialidade por categoria; (4) gastos recorrentes e valores usuais; (5) o que assumir quando faltar informação. Use os NOMES exatos de categorias, contas e cartões. Máximo de 25 linhas.'},{role:'user',content:resumoGastos()}]);
+    g('iaRegras').value=Array.isArray(r.regras)?r.regras.join('\n'):String(r.regras||'');
+    st.textContent='Análise pronta — revise, edite se quiser e clique em "Salvar padrões e regras".';
+  }catch(e){ st.innerHTML='A IA não respondeu ('+esc(e.message)+'). Os padrões de pagamento já foram sugeridos; você pode salvá-los ou escrever as regras manualmente.'; }
+  btn.disabled=false;
+});
+document.getElementById('btnIASalvar').addEventListener('click',async()=>{
+  const g=id=>document.getElementById(id);
+  await setDoc(doc(db,'meta','ia'),{regras:g('iaRegras').value.trim(),padroes:{pagarCom:g('iaPagarCom').value,contaDebito:g('iaContaDeb').value,cartaoCredito:g('iaCartaoCred').value},atualizadoEm:Date.now()});
+  toast('Padrões e regras da IA salvos.');
+});
 
 openMonths.add(todayKey());
 initDashboards();

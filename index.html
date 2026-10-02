@@ -480,6 +480,11 @@
     .invoice-head .exp-val{ width:132px; min-width:132px; }
     .invoice-body{ padding:4px 16px 10px 62px; }
   }
+  .mic.rec{ background:var(--rose-dim); color:var(--rose); animation:pulsa 1s infinite; }
+  @keyframes pulsa{ 50%{ opacity:.55; } }
+  .rv-list{ max-height:60vh; overflow:auto; margin:12px 0; }
+  .rv-row{ display:grid; grid-template-columns:28px repeat(auto-fit,minmax(130px,1fr)); gap:10px; align-items:end; padding:12px; border:1px solid var(--border-soft); border-radius:12px; margin-bottom:8px; background:var(--bg-elevated); }
+  .rv-desc{ grid-column:span 2; } .rv-sup{ grid-column:1/-1; font-size:11.5px; color:var(--text-muted); }
 </style>
 </head>
 <body>
@@ -542,6 +547,7 @@
           Ocultar meses retroativos
         </label>
         <button class="btn btn-primary btn-sm" id="btnIA">✨ Lançamento inteligente</button>
+        <button class="btn btn-ghost btn-sm" id="btnChat">💬 Perguntar aos dados</button>
         <button class="btn btn-ghost btn-sm" id="btnAddMesRetro">
           <svg class="icon" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>
           Adicionar mês retroativo
@@ -2002,7 +2008,7 @@ function renderConfigFormas(){
 /* ---------- MODAIS ---------- */
 const overlay = document.getElementById('modalOverlay');
 const modalBox = document.getElementById('modalBox');
-function closeModal(){ overlay.classList.remove('active'); modalBox.innerHTML=''; }
+function closeModal(){ overlay.classList.remove('active'); modalBox.innerHTML=''; modalBox.style.maxWidth=''; }
 overlay.addEventListener('click', e=>{ if(e.target===overlay) closeModal(); });
 function openModal(html){ modalBox.innerHTML = '<div class="modal-drag-handle"></div>' + html; overlay.classList.add('active'); }
  
@@ -2696,14 +2702,15 @@ function contextoIA(){
     formas:state.formas.map(f=>({id:f.id,nome:f.nome})),
     historico_descricao__categoria_sub_essencialidade_classe_tipo:Object.fromEntries(hist)};
 }
-function promptIA(){
-  return `Você é o assistente de lançamentos de um app de finanças pessoais. Converta o texto em UMA despesa. Responda SOMENTE com JSON válido, sem texto fora do JSON.
+function promptIA(arquivo){
+  return `Você é o assistente de lançamentos de um app de finanças pessoais. Converta o texto em UMA OU MAIS despesas (ex.: "30 no Uber e 50 no mercado" = 2 lançamentos). Responda SOMENTE com JSON válido, sem texto fora do JSON.
 PRIORIDADE: preencher SEM perguntar. Decida sozinho usando, nesta ordem: (1) "regras_do_usuario" e "padroes"; (2) o "historico" (descrição→categoria/sub/essencialidade/classe/tipo); (3) bom senso (farmácia→Saúde/Farmácia, supermercado→Alimentação/Mercado, mesmo que o nome do estabelecimento seja desconhecido).
 Quando faltar informação use os padrões: sem meio de pagamento → padroes.pagarCom; "débito/pix/dinheiro" sem conta → padroes.contaDebito; "crédito/cartão" sem nome → padroes.cartaoCredito; "Visa", "Nubank" etc. → cartão cadastrado com esse nome. Sem data → hoje. Parcelado com valor ambíguo → assuma que é o valor TOTAL. Essencialidade, classe e tipo: decida você.
 Só pergunte se for IMPOSSÍVEL decidir (sem padrão, sem histórico e sem como deduzir o meio de pagamento) — no máximo 1 pergunta.
 Sempre liste em "suposicoes" (curtas) o que você assumiu ou inferiu.
-Formatos: {"lancamento":{"descricao":"","valor":0,"valorTipo":"total|parcela","data":"YYYY-MM-DD","parcelas":1,"categoriaId":"","subcategoria":"","tipoId":"","classeId":"","essencialidade":"essencial|reduzivel|superfluo","pagarCom":"id de contas/cartoes do contexto","formaPagamentoId":"","suposicoes":["..."]}} ou {"perguntas":["..."]}.
-Use SOMENTE ids do contexto.
+Formatos: {"lancamentos":[{"descricao":"","valor":0,"valorTipo":"total|parcela","data":"YYYY-MM-DD","parcelas":1,"parcelaAtual":1,"categoriaId":"","subcategoria":"","tipoId":"","classeId":"","essencialidade":"essencial|reduzivel|superfluo","pagarCom":"id de contas/cartoes do contexto","formaPagamentoId":"","suposicoes":["..."]}]} ou {"perguntas":["..."]}.
+Use SOMENTE ids do contexto.${arquivo?`
+O texto vem de recibo, fatura, extrato ou planilha: extraia CADA gasto como um lançamento (ignore saldos, totais, pagamentos recebidos e estornos; recibo único = 1 lançamento com o total). Se houver 'parcela X/Y', use parcelas=Y, parcelaAtual=X e valorTipo=parcela. Datas dd/mm sem ano usam o ano de hoje. NÃO faça perguntas.`:''}
 CONTEXTO: ${JSON.stringify(contextoIA())}`;
 }
 function maiorString(o,d=0){
@@ -2751,12 +2758,18 @@ async function chamarIA(messages){
 function openIAModal(){
   iaMsgs=null; iaRodadas=0;
   openModal(`<div class="modal-head"><h3>✨ Lançamento inteligente</h3><button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
-    <div class="field full"><label>Descreva o gasto com suas palavras</label><textarea id="iaTexto" rows="3" placeholder="Ex: ontem gastei 900 no Jacomar, paguei no Visa em 5x"></textarea></div>
+    <div class="field full"><label>Descreva um ou mais gastos (digite, fale ou envie um arquivo)</label><textarea id="iaTexto" rows="3" placeholder="Ex: ontem gastei 900 no Jacomar no Visa em 5x, e 30 de Uber no débito"></textarea></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"><button class="btn btn-ghost btn-sm mic" id="iaMic">🎤 Falar</button><button class="btn btn-ghost btn-sm" id="iaAnexo">📎 Foto, PDF ou planilha</button><input type="file" id="iaArq" accept="image/*,.pdf,.xlsx,.xls,.csv,.ofx,.txt" hidden></div>
+    <div style="font-size:11.5px;color:var(--text-muted);margin-top:8px;">Arquivos são lidos só no seu aparelho e descartados: nada é salvo, e só o texto extraído vai para a IA.</div>
     <div class="pagar-com-note" id="iaResp" style="display:block;margin-top:10px;">Eu preencho o formulário e você confere antes de salvar. Se eu tiver dúvida, pergunto.</div>
     <div class="modal-actions"><button class="btn btn-ghost" id="mCancel">Cancelar</button><button class="btn btn-primary" id="iaEnviar">Interpretar</button></div>`);
   document.getElementById('mClose').addEventListener('click',closeModal);
   document.getElementById('mCancel').addEventListener('click',closeModal);
   const ta=document.getElementById('iaTexto'), resp=document.getElementById('iaResp'), btn=document.getElementById('iaEnviar');
+  const mic=document.getElementById('iaMic'), arq=document.getElementById('iaArq');
+  mic.addEventListener('click',()=>ditar(ta,mic,()=>btn.click()));
+  document.getElementById('iaAnexo').addEventListener('click',()=>arq.click());
+  arq.addEventListener('change',e=>{ const f=e.target.files[0]; e.target.value=''; if(f) processarArquivo(f,resp,btn); });
   btn.addEventListener('click',async()=>{
     const txt=ta.value.trim(); if(!txt) return;
     const txtF=iaRodadas>0?txt+' (Não faça mais perguntas: preencha com sua melhor estimativa e registre em suposicoes.)':txt;
@@ -2765,7 +2778,7 @@ function openIAModal(){
     try{
       const r=await chamarIA(iaMsgs); iaMsgs.push({role:'assistant',content:JSON.stringify(r)});
       if(r.perguntas&&r.perguntas.length){ iaRodadas++; resp.innerHTML='🤔 Preciso confirmar:<br>'+r.perguntas.map(p=>'• '+esc(p)).join('<br>'); ta.value=''; ta.placeholder='Responda aqui…'; ta.focus(); }
-      else if(r.lancamento){ closeModal(); aplicarLancamentoIA(r.lancamento); }
+      else if(r.lancamentos||r.lancamento){ const L=r.lancamentos||[r.lancamento]; closeModal(); if(L.length===1) aplicarLancamentoIA(L[0]); else openRevisaoLote(L); }
       else throw new Error('resposta inesperada');
     }catch(e){ resp.innerHTML='Não consegui interpretar ('+esc(e.message)+'). Reescreva ou use "Nova despesa".'+(e.detalhes?'<br><small style="color:var(--text-muted)">Detalhes técnicos:<br>'+e.detalhes.slice(0,12).map(esc).join('<br>')+'</small>':''); }
     btn.disabled=false;
@@ -3118,6 +3131,154 @@ Object.entries(VT).forEach(([k,[t,d]])=>document.getElementById('view-'+k).inser
   }
   draw();
 })();
+
+
+/* ---------- Voz, arquivos (processados só em memória), lote e chat com os dados ---------- */
+let recAtiva=null;
+function ditar(ta,btn,fim){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ toast('Ditado não suportado neste navegador. Use o microfone do teclado.'); return; }
+  if(recAtiva){ recAtiva.stop(); return; }
+  const r=new SR(); recAtiva=r; r.lang='pt-BR'; r.interimResults=true; const base=ta.value?ta.value+' ':'';
+  r.onresult=e=>{ ta.value=base+[...e.results].map(x=>x[0].transcript).join(''); };
+  r.onerror=e=>toast('Microfone: '+e.error);
+  r.onend=()=>{ recAtiva=null; btn.classList.remove('rec'); if(ta.value.trim()&&fim) fim(); };
+  r.start(); btn.classList.add('rec');
+}
+const LIBS={tess:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',pdf:'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',pdfw:'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js',xlsx:'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'};
+const carregarLib=url=>new Promise((ok,err)=>{ if(document.querySelector(`script[src="${url}"]`)) return ok(); const e=document.createElement('script'); e.src=url; e.onload=ok; e.onerror=()=>err(new Error('falha ao carregar biblioteca (sem internet?)')); document.head.appendChild(e); });
+async function ocr(img){ await carregarLib(LIBS.tess); const w=await Tesseract.createWorker('por'); try{ return (await w.recognize(img)).data.text; } finally{ await w.terminate(); } }
+async function lerArquivo(f){
+  const n=f.name.toLowerCase();
+  if(f.type.startsWith('image/')) return ocr(f);
+  if(n.endsWith('.pdf')){
+    await carregarLib(LIBS.pdf); pdfjsLib.GlobalWorkerOptions.workerSrc=LIBS.pdfw;
+    const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise; let txt='';
+    for(let p=1;p<=Math.min(pdf.numPages,30);p++){
+      const c=await (await pdf.getPage(p)).getTextContent(); let y=null, l='';
+      c.items.forEach(it=>{ const yy=Math.round(it.transform[5]); if(y!==null&&Math.abs(yy-y)>3){ txt+=l.trim()+'\n'; l=''; } y=yy; l+=it.str+' '; }); txt+=l+'\n';
+    }
+    if(txt.replace(/\s/g,'').length<40){ txt='';
+      for(let p=1;p<=Math.min(pdf.numPages,5);p++){ const pg=await pdf.getPage(p), vp=pg.getViewport({scale:2}), cv=document.createElement('canvas'); cv.width=vp.width; cv.height=vp.height; await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise; txt+=await ocr(cv)+'\n'; } }
+    return txt;
+  }
+  if(/\.(xlsx|xls|csv)$/.test(n)){
+    await carregarLib(LIBS.xlsx); const wb=XLSX.read(await f.arrayBuffer(),{type:'array',cellDates:true});
+    return wb.SheetNames.slice(0,3).map(sn=>XLSX.utils.sheet_to_csv(wb.Sheets[sn],{FS:' ; ',dateNF:'yyyy-mm-dd'})).join('\n');
+  }
+  return f.text();
+}
+async function processarArquivo(f,resp,btn){
+  btn.disabled=true;
+  try{
+    resp.textContent='Lendo o arquivo no seu aparelho…';
+    const linhas=(await lerArquivo(f)).split('\n').map(l=>l.trim()).filter(Boolean);
+    if(!linhas.length) throw new Error('não encontrei texto no arquivo');
+    const tam=f.type.startsWith('image/')?150:45, partes=[], sys=promptIA(true), lista=[];
+    for(let i=0;i<Math.min(linhas.length,tam*10);i+=tam) partes.push(linhas.slice(i,i+tam).join('\n'));
+    for(let i=0;i<partes.length;i++){
+      resp.textContent=`Interpretando com a IA (${i+1}/${partes.length})…`;
+      const r=await chamarIA([{role:'system',content:sys},{role:'user',content:'Texto extraído:\n'+partes[i]}]);
+      lista.push(...(r.lancamentos||(r.lancamento?[r.lancamento]:[])));
+    }
+    if(!lista.length) throw new Error('nenhum gasto identificado');
+    closeModal(); openRevisaoLote(lista);
+  }catch(e){ resp.textContent='Não consegui ler: '+e.message; }
+  btn.disabled=false;
+}
+const dataOk=d=>/^\d{4}-\d{2}-\d{2}$/.test(d)?d:hojeISO();
+async function salvarLancamentoIA(l){
+  const data=dataOk(l.data), [pt,pid]=String(l.pagarCom||'').split(':'), cartao=pt==='cartao'?byId(state.cartoes,pid):null;
+  const n=Math.max(1,Number(l.parcelas)||1), at=Math.max(1,Math.min(n,Number(l.parcelaAtual)||1));
+  const vp=l.valorTipo==='parcela'?Number(l.valor):round2(Number(l.valor)/n), m0=cartao?mesFaturaCartao(cartao,data):data.slice(0,7), hoje=todayKey();
+  const forma=cartao?(state.formas.find(f=>normalizar(f.nome).includes('credito'))||{}).id:l.formaPagamentoId;
+  const base={descricao:l.descricao,categoriaId:l.categoriaId||null,subcategoria:l.subcategoria||'',tipoId:l.tipoId||null,classeId:l.classeId||null,essencialidade:l.essencialidade||null,contaId:pt==='conta'?pid:null,cartaoId:cartao?cartao.id:null,formaPagamentoId:forma||null,vencimento:cartao?(cartao.diaVencimento||null):null};
+  const pago=m=>monthOrder(m)<monthOrder(hoje)||(m===hoje&&!cartao&&data<=hojeISO());
+  if(n===1) return addDoc(collection(db,'despesas'),{...base,valor:vp,mes:m0,pago:pago(m0)});
+  const parc=genId();
+  return Promise.all(Array.from({length:n-at+1},(_,i)=>{ const m=addMonths(m0,i), k=at+i; return addDoc(collection(db,'despesas'),{...base,descricao:`${l.descricao} (${k}/${n})`,valor:vp,mes:m,pago:pago(m),parcelamentoId:parc,parcelaAtual:k,parcelaTotal:n}); }));
+}
+function openRevisaoLote(lista){
+  if(!lista.length){ toast('Nada para revisar.'); return; }
+  const padrao=(state.ia.padroes||{}).pagarCom||'';
+  const L=lista.map(l=>{ const n=Math.max(1,Number(l.parcelas)||1); return {...l,parcelas:n,valor:round2(l.valorTipo==='parcela'?Number(l.valor)*n:Number(l.valor)),valorTipo:'total',data:dataOk(l.data),pagarCom:l.pagarCom||padrao,categoriaId:byId(state.categorias,l.categoriaId)?l.categoriaId:''}; });
+  const pOpts=sel=>'<option value="">—</option><optgroup label="Contas">'+state.contas.map(c=>`<option value="conta:${c.id}" ${sel==='conta:'+c.id?'selected':''}>${esc(c.nome)}</option>`).join('')+'</optgroup><optgroup label="Cartões">'+state.cartoes.map(c=>`<option value="cartao:${c.id}" ${sel==='cartao:'+c.id?'selected':''}>${esc(c.nome)}</option>`).join('')+'</optgroup>';
+  openModal(`<div class="modal-head"><h3>Revisar ${L.length} lançamento${L.length>1?'s':''}</h3><button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
+    <div class="dash-hint">Confira e corrija o que precisar. Desmarque o que não quiser lançar.</div>
+    <div class="rv-list">${L.map((l,i)=>`<div class="rv-row" data-i="${i}"><input type="checkbox" class="rvOn" checked>
+      <div class="field rv-desc"><label>Descrição</label><input class="rvDesc" value="${esc(l.descricao)}"></div>
+      <div class="field"><label>Valor total (R$)</label><input class="rvVal" type="number" step="0.01" value="${l.valor}"></div>
+      <div class="field"><label>Parcelas</label><input class="rvPar" type="number" min="1" value="${l.parcelas}"></div>
+      <div class="field"><label>Data</label><input class="rvData" type="date" value="${l.data}"></div>
+      <div class="field"><label>Categoria</label><select class="rvCat"><option value="">—</option>${optionsHtml(state.categorias,l.categoriaId)}</select></div>
+      <div class="field"><label>Pagar com</label><select class="rvPag">${pOpts(l.pagarCom)}</select></div>
+      <div class="field"><label>Essencialidade</label><select class="rvEss"><option value="">—</option>${Object.entries(ESS).map(([k,v])=>`<option value="${k}" ${l.essencialidade===k?'selected':''}>${v}</option>`).join('')}</select></div>
+      ${Array.isArray(l.suposicoes)&&l.suposicoes.length?`<div class="rv-sup">🤖 ${l.suposicoes.map(esc).join(' • ')}</div>`:''}</div>`).join('')}</div>
+    <div class="modal-actions"><button class="btn btn-ghost" id="mCancel">Cancelar</button><button class="btn btn-primary" id="mLancar">Lançar selecionados</button></div>`);
+  modalBox.style.maxWidth='1000px';
+  document.getElementById('mClose').addEventListener('click',closeModal); document.getElementById('mCancel').addEventListener('click',closeModal);
+  document.getElementById('mLancar').addEventListener('click',async e=>{
+    const b=e.currentTarget; b.disabled=true; b.textContent='Lançando…'; let ok=0;
+    for(const row of modalBox.querySelectorAll('.rv-row')){
+      if(!row.querySelector('.rvOn').checked) continue;
+      const q=c=>row.querySelector(c).value, base=L[+row.dataset.i];
+      const l={...base,descricao:q('.rvDesc').trim(),valor:Number(q('.rvVal'))||0,parcelas:Number(q('.rvPar'))||1,data:q('.rvData'),categoriaId:q('.rvCat')||null,pagarCom:q('.rvPag'),essencialidade:q('.rvEss')||null,valorTipo:'total'};
+      if(!l.descricao||!l.valor) continue;
+      try{ await salvarLancamentoIA(l); ok++; }catch(_){}
+    }
+    closeModal(); toast(ok+' lançamento'+(ok!==1?'s':'')+' registrado'+(ok!==1?'s':'')+'.');
+  });
+}
+
+/* ---- Chat com os dados (a IA monta a consulta; o app calcula) ---- */
+let chatMsgs=null;
+function promptChat(){
+  const c=contextoIA(); Object.keys(c).filter(k=>k.startsWith('historico')||k==='regras_do_usuario'||k==='padroes').forEach(k=>delete c[k]);
+  return `Você responde perguntas sobre as finanças do usuário. NÃO calcule nada: devolva uma consulta que o app executa. Responda SOMENTE JSON: {"intro":"frase curta","consulta":{"tipo":"gasto|receita","desde":"YYYY-MM","ate":"YYYY-MM","categoria":"nome ou vazio","subcategoria":"","texto":"trecho da descrição ou vazio","essencialidade":"essencial|reduzivel|superfluo ou vazio","situacao":"pago|previsto|todos","agruparPor":"nenhum|mes|categoria|subcategoria|tipo|classe|forma|conta"}} ou {"resposta":"..."} se a pergunta não for sobre os dados. "últimos 3 meses" = o mês atual e os 2 anteriores; "este ano" = janeiro até dezembro. Use os nomes de categoria exatamente como no contexto; para um estabelecimento específico use "texto". HOJE: ${hojeISO()}. CONTEXTO: ${JSON.stringify(c)}`;
+}
+function executarConsulta(q){
+  const rec=q.tipo==='receita', nz=normalizar;
+  let cat=q.categoria?state.categorias.find(c=>nz(c.nome)===nz(q.categoria)):null, sub=q.subcategoria||'', texto=q.texto||'';
+  if(q.categoria&&!cat){ const subm=state.categorias.flatMap(c=>c.subcategorias||[]).find(x=>nz(x)===nz(q.categoria)); if(subm) sub=subm; else texto=texto||q.categoria; }
+  const ds=(rec?state.receitas:state.despesas).filter(d=>{
+    if(q.desde&&monthOrder(d.mes)<monthOrder(q.desde)) return false;
+    if(q.ate&&monthOrder(d.mes)>monthOrder(q.ate)) return false;
+    if(texto&&!nz(d.descricao).includes(nz(texto))) return false;
+    const feito=rec?receitaRecebida(d):d.pago;
+    if(q.situacao==='pago'&&!feito) return false; if(q.situacao==='previsto'&&feito) return false;
+    if(!rec){ if(cat&&d.categoriaId!==cat.id) return false; if(sub&&nz(d.subcategoria)!==nz(sub)) return false; if(q.essencialidade&&d.essencialidade!==q.essencialidade) return false; }
+    return true;
+  });
+  const g=q.agruparPor, tot=ds.reduce((s,d)=>s+Number(d.valor||0),0), meses=new Set(ds.map(d=>d.mes)).size;
+  const grupos=new Map();
+  if(g&&g!=='nenhum') ds.forEach(d=>{ const k=g==='mes'?d.mes:(rec?((byId(state.contas,d.contaId)||{}).nome||'Sem conta'):(g==='subcategoria'?(d.subcategoria||'Sem subcategoria'):chaveDim(d,g==='conta'?'pagamento':g))); grupos.set(k,(grupos.get(k)||0)+Number(d.valor||0)); });
+  const arr=[...grupos.entries()].sort((a,b)=>g==='mes'?monthOrder(a[0])-monthOrder(b[0]):b[1]-a[1]), mx=Math.max(1,...arr.map(x=>x[1]));
+  const linha=(a,b)=>`<div class="row-between" style="font-size:12.5px;padding:3px 0;"><span>${esc(a)}</span><span class="mono">${fmt(b)}</span></div>`;
+  return `<div style="font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${rec?'var(--emerald)':'var(--rose)'}">${fmt(tot)}</div><div style="color:var(--text-muted);font-size:12px;margin-bottom:8px;">${ds.length} lançamento${ds.length!==1?'s':''}${meses>1?' • média '+fmt(tot/meses)+'/mês':''}</div>`
+    +arr.map(([k,v])=>`<div style="margin:5px 0;">${linha(g==='mes'?monthLabel(k):k,v)}<div class="bar-track" style="height:6px"><div class="bar-fill" style="width:${v/mx*100}%;background:${rec?'var(--emerald)':'var(--violet)'}"></div></div></div>`).join('')
+    +(arr.length?'':ds.slice().sort((a,b)=>b.valor-a.valor).slice(0,5).map(d=>linha(d.descricao+' • '+monthLabel(d.mes),d.valor)).join(''));
+}
+function openChatModal(){
+  chatMsgs=[{role:'system',content:promptChat()}];
+  openModal(`<div class="modal-head"><h3>💬 Pergunte aos seus dados</h3><button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
+    <div id="chatLog" style="max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;"><div class="pagar-com-note" style="display:block;">Ex.: "quanto gastei em mercado nos últimos 3 meses?", "quais meus maiores gastos supérfluos este ano?", "quanto recebi por conta em 2026?"</div></div>
+    <div style="display:flex;gap:8px;"><input id="chatIn" placeholder="Pergunte algo…"><button class="btn btn-ghost mic" id="chatMic" title="Falar">🎤</button><button class="btn btn-primary" id="chatSend">Enviar</button></div>`);
+  document.getElementById('mClose').addEventListener('click',closeModal);
+  const log=document.getElementById('chatLog'), inp=document.getElementById('chatIn');
+  const add=(h,me)=>{ const d=document.createElement('div'); d.style.cssText='max-width:92%;padding:10px 14px;border-radius:14px;font-size:13.5px;'+(me?'align-self:flex-end;background:var(--emerald-dim);':'align-self:flex-start;background:var(--bg-elevated-2);'); d.innerHTML=h; log.appendChild(d); log.scrollTop=log.scrollHeight; return d; };
+  async function enviar(){
+    const q=inp.value.trim(); if(!q) return; inp.value=''; add(esc(q),true); const w=add('Pensando…'); chatMsgs.push({role:'user',content:q});
+    try{ const r=await chamarIA(chatMsgs); chatMsgs.push({role:'assistant',content:JSON.stringify(r)});
+      w.innerHTML=r.consulta?(r.intro?esc(r.intro)+'<br>':'')+executarConsulta(r.consulta):esc(r.resposta||'Não entendi a pergunta.');
+    }catch(e){ w.textContent='Não consegui responder ('+e.message+').'; }
+    log.scrollTop=log.scrollHeight;
+  }
+  document.getElementById('chatSend').addEventListener('click',enviar);
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter') enviar(); });
+  const mic=document.getElementById('chatMic'); mic.addEventListener('click',()=>ditar(inp,mic,enviar));
+  inp.focus();
+}
+document.getElementById('btnChat').addEventListener('click',openChatModal);
 
 openMonths.add(todayKey());
 initDashboards();

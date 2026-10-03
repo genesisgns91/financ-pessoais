@@ -485,6 +485,19 @@
   .rv-list{ max-height:60vh; overflow:auto; margin:12px 0; }
   .rv-row{ display:grid; grid-template-columns:28px repeat(auto-fit,minmax(130px,1fr)); gap:10px; align-items:end; padding:12px; border:1px solid var(--border-soft); border-radius:12px; margin-bottom:8px; background:var(--bg-elevated); }
   .rv-desc{ grid-column:span 2; } .rv-sup{ grid-column:1/-1; font-size:11.5px; color:var(--text-muted); }
+  .mic-wrap{ display:flex; flex-direction:column; align-items:center; gap:10px; margin:16px 0 6px; }
+  .mic-big{ all:unset; cursor:pointer; box-sizing:border-box; width:76px; height:76px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#3ceab6,#2cc7c4); color:#08120e; box-shadow:0 10px 26px rgba(52,227,176,.32); transition:transform .15s; -webkit-tap-highlight-color:transparent; }
+  .mic-big:active{ transform:scale(.92); }
+  .mic-big .mic-bars{ display:none; }
+  .mic-big.rec{ background:linear-gradient(135deg,#ff7a8f,#ff5a78); color:#fff; animation:micPulse 1.4s infinite; }
+  .mic-big.rec svg{ display:none; } .mic-big.rec .mic-bars{ display:flex; gap:4px; align-items:center; height:32px; }
+  .mic-bars i{ width:5px; height:8px; border-radius:3px; background:#fff; animation:micBar .9s ease-in-out infinite; }
+  .mic-bars i:nth-child(2){ animation-delay:.12s; } .mic-bars i:nth-child(3){ animation-delay:.24s; } .mic-bars i:nth-child(4){ animation-delay:.36s; } .mic-bars i:nth-child(5){ animation-delay:.48s; }
+  .mic-label{ font-size:13px; color:var(--text-secondary); font-weight:600; text-align:center; min-height:18px; }
+  @keyframes micBar{ 0%,100%{ height:8px; } 50%{ height:30px; } }
+  @keyframes micPulse{ 0%{ box-shadow:0 0 0 0 rgba(255,122,143,.55); } 70%{ box-shadow:0 0 0 26px rgba(255,122,143,0); } 100%{ box-shadow:0 0 0 0 rgba(255,122,143,0); } }
+  @media(max-width:720px){ .mic-big{ width:96px; height:96px; } .mic-wrap{ margin:22px 0 8px; } .mic-label{ font-size:14px; } #chatMic{ font-size:22px; padding:10px 16px; } }
 </style>
 </head>
 <body>
@@ -2678,7 +2691,16 @@ document.getElementById('fileImport').addEventListener('change',async e=>{
 });
 
 /* ---------- Lançamento inteligente (IA via workers) ---------- */
-const PROXIES_WORKERS=["https://astro2.genesisgns.workers.dev/","https://mamoot-gpt-proxy.genesisgns.workers.dev/","https://astro-gns-proxy.genesisgns.workers.dev/","https://forzion-gpt-proxy.genesisgns.workers.dev/","https://shiny-sky-21dd.genesisgns.workers.dev/","https://interno.genesisgns.workers.dev/"];
+const PROXIES_WORKERS=[
+  "https://certificados-groq-proxy.genesisgns.workers.dev/",
+  "https://gns91-groq-proxy.genesisgns.workers.dev/",
+  "https://forzion-gpt-proxy.genesisgns.workers.dev/",
+  "https://mamoot-gpt-proxy.genesisgns.workers.dev/",
+  "https://astro-gns-proxy.genesisgns.workers.dev/",
+  "https://shiny-sky-21dd.genesisgns.workers.dev/",
+  "https://astro2.genesisgns.workers.dev/",
+  "https://interno.genesisgns.workers.dev/"
+];
 let iaIdx=0, iaMsgs=null, iaRodadas=0;
 const hojeISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 function mesFaturaCartao(c,iso){
@@ -2742,16 +2764,14 @@ async function tentarWorker(url,body,ms){
 }
 async function chamarIA(messages){
   const conversa=messages.slice(1).map(m=>(m.role==='user'?'USUÁRIO: ':'ASSISTENTE: ')+m.content).join('\n\n');
-  const formatos=[
-    ['prompt',{prompt:messages[0].content+'\n\n'+conversa+'\n\nResponda apenas com o JSON.'}],
-    ['prompt+system',{system:messages[0].content,prompt:conversa}],
-    ['messages',{messages}]
-  ];
+  const formatos=[['prompt',{prompt:messages[0].content+'\n\n'+conversa+'\n\nResponda apenas com o JSON.'}],['messages',{messages}]];
   const erros=[];
-  for(const [nome,body] of formatos){
-    try{
-      return await Promise.any(PROXIES_WORKERS.map(u=>tentarWorker(u,body,20000).catch(e=>{ erros.push(nome+' | '+new URL(u).hostname.split('.')[0]+': '+e.message); throw e; })));
-    }catch(_){ /* tenta o próximo formato de corpo */ }
+  for(const url of PROXIES_WORKERS){            // ordem de prioridade: só passa para a próxima se esta falhar
+    const nome=new URL(url).hostname.split('.')[0];
+    for(const [nf,body] of formatos){
+      try{ return await tentarWorker(url,body,25000); }
+      catch(e){ erros.push(nome+' ('+nf+'): '+e.message); if(!/HTTP 4(00|22)/.test(e.message)) break; }
+    }
   }
   const err=new Error('nenhuma worker respondeu'); err.detalhes=erros; throw err;
 }
@@ -2759,7 +2779,8 @@ function openIAModal(){
   iaMsgs=null; iaRodadas=0;
   openModal(`<div class="modal-head"><h3>✨ Lançamento inteligente</h3><button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
     <div class="field full"><label>Descreva um ou mais gastos (digite, fale ou envie um arquivo)</label><textarea id="iaTexto" rows="3" placeholder="Ex: ontem gastei 900 no Jacomar no Visa em 5x, e 30 de Uber no débito"></textarea></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"><button class="btn btn-ghost btn-sm mic" id="iaMic">🎤 Falar</button><button class="btn btn-ghost btn-sm" id="iaAnexo">📎 Foto, PDF ou planilha</button><input type="file" id="iaArq" accept="image/*,.pdf,.xlsx,.xls,.csv,.ofx,.txt" hidden></div>
+    <div class="mic-wrap"><button type="button" class="mic-big" id="iaMic" aria-label="Falar seus gastos"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></svg><span class="mic-bars"><i></i><i></i><i></i><i></i><i></i></span></button><div class="mic-label">Toque e fale seus gastos</div></div>
+    <div style="display:flex;justify-content:center;margin-top:4px;"><button class="btn btn-ghost btn-sm" id="iaAnexo">📎 Foto, PDF ou planilha</button><input type="file" id="iaArq" accept="image/*,.pdf,.xlsx,.xls,.csv,.ofx,.txt" hidden></div>
     <div style="font-size:11.5px;color:var(--text-muted);margin-top:8px;">Arquivos são lidos só no seu aparelho e descartados: nada é salvo, e só o texto extraído vai para a IA.</div>
     <div class="pagar-com-note" id="iaResp" style="display:block;margin-top:10px;">Eu preencho o formulário e você confere antes de salvar. Se eu tiver dúvida, pergunto.</div>
     <div class="modal-actions"><button class="btn btn-ghost" id="mCancel">Cancelar</button><button class="btn btn-primary" id="iaEnviar">Interpretar</button></div>`);
@@ -2774,7 +2795,7 @@ function openIAModal(){
     const txt=ta.value.trim(); if(!txt) return;
     const txtF=iaRodadas>0?txt+' (Não faça mais perguntas: preencha com sua melhor estimativa e registre em suposicoes.)':txt;
     if(!iaMsgs) iaMsgs=[{role:'system',content:promptIA()},{role:'user',content:txtF}]; else iaMsgs.push({role:'user',content:txtF});
-    resp.innerHTML='Interpretando…'; btn.disabled=true;
+    resp.innerHTML='Interpretando…'; btn.disabled=true; const lbl=document.querySelector('.mic-label'); if(lbl) lbl.textContent='Toque e fale seus gastos';
     try{
       const r=await chamarIA(iaMsgs); iaMsgs.push({role:'assistant',content:JSON.stringify(r)});
       if(r.perguntas&&r.perguntas.length){ iaRodadas++; resp.innerHTML='🤔 Preciso confirmar:<br>'+r.perguntas.map(p=>'• '+esc(p)).join('<br>'); ta.value=''; ta.placeholder='Responda aqui…'; ta.focus(); }
@@ -3136,14 +3157,16 @@ Object.entries(VT).forEach(([k,[t,d]])=>document.getElementById('view-'+k).inser
 /* ---------- Voz, arquivos (processados só em memória), lote e chat com os dados ---------- */
 let recAtiva=null;
 function ditar(ta,btn,fim){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){ toast('Ditado não suportado neste navegador. Use o microfone do teclado.'); return; }
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition, PAD='Toque e fale seus gastos';
+  const lb=btn.parentElement&&btn.parentElement.querySelector('.mic-label'), msg=t=>{ if(lb) lb.textContent=t; }, vib=n=>{ if(navigator.vibrate) navigator.vibrate(n); };
+  if(!SR){ toast('Ditado não suportado neste navegador. Use o microfone do teclado.'); msg('Ditado indisponível aqui — use o microfone do teclado'); return; }
   if(recAtiva){ recAtiva.stop(); return; }
-  const r=new SR(); recAtiva=r; r.lang='pt-BR'; r.interimResults=true; const base=ta.value?ta.value+' ':'';
+  const r=new SR(); recAtiva=r; r.lang='pt-BR'; r.interimResults=true; const base=ta.value?ta.value+' ':''; let erro=false;
   r.onresult=e=>{ ta.value=base+[...e.results].map(x=>x[0].transcript).join(''); };
-  r.onerror=e=>toast('Microfone: '+e.error);
-  r.onend=()=>{ recAtiva=null; btn.classList.remove('rec'); if(ta.value.trim()&&fim) fim(); };
-  r.start(); btn.classList.add('rec');
+  r.onerror=e=>{ erro=true; const m={'not-allowed':'Permita o microfone nas configurações do navegador','service-not-allowed':'Permita o microfone nas configurações do navegador','no-speech':'Não ouvi nada. Toque e tente de novo','audio-capture':'Microfone não encontrado','network':'Sem conexão para reconhecer a voz'}[e.error]||'Erro no microfone'; toast(m); msg(m); };
+  r.onend=()=>{ recAtiva=null; btn.classList.remove('rec'); vib(15);
+    if(!erro){ if(ta.value.trim()&&fim){ msg('Interpretando…'); fim(); } else msg(PAD); } };
+  r.start(); btn.classList.add('rec'); msg('Ouvindo… toque para parar'); vib(25);
 }
 const LIBS={tess:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',pdf:'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',pdfw:'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js',xlsx:'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'};
 const carregarLib=url=>new Promise((ok,err)=>{ if(document.querySelector(`script[src="${url}"]`)) return ok(); const e=document.createElement('script'); e.src=url; e.onload=ok; e.onerror=()=>err(new Error('falha ao carregar biblioteca (sem internet?)')); document.head.appendChild(e); });

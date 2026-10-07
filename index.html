@@ -498,6 +498,83 @@
   @keyframes micBar{ 0%,100%{ height:8px; } 50%{ height:30px; } }
   @keyframes micPulse{ 0%{ box-shadow:0 0 0 0 rgba(255,122,143,.55); } 70%{ box-shadow:0 0 0 26px rgba(255,122,143,0); } 100%{ box-shadow:0 0 0 0 rgba(255,122,143,0); } }
   @media(max-width:720px){ .mic-big{ width:96px; height:96px; } .mic-wrap{ margin:22px 0 8px; } .mic-label{ font-size:14px; } #chatMic{ font-size:22px; padding:10px 16px; } }
+
+  /* ===== Mobile autoral: Início, dock flutuante, hero ===== */
+  nav.tabs button.mobile-only{ display:none; }
+  .adv summary{ cursor:pointer; font-weight:700; font-size:13px; color:var(--emerald); padding:10px 0; list-style:none; }
+  .adv summary em{ color:var(--text-muted); font-weight:500; font-style:normal; }
+  @media(max-width:720px){
+    nav.tabs button.mobile-only{ display:flex; }
+    nav.tabs button[data-tab="contas"],nav.tabs button[data-tab="dashboards"],nav.tabs button[data-tab="config"]{ display:none; }
+    nav.tabs{ left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom)); width:auto; border-radius:28px; padding:8px 6px; background:rgba(14,16,26,.78);
+      backdrop-filter:blur(20px) saturate(1.4); -webkit-backdrop-filter:blur(20px) saturate(1.4); border:1px solid rgba(255,255,255,.09); box-shadow:0 18px 44px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.06); }
+    nav.tabs button.active{ background:linear-gradient(180deg,rgba(52,227,176,.2),transparent); }
+    nav.tabs button.active .nav-ico{ filter:drop-shadow(0 0 8px var(--emerald)); }
+    .fab{ bottom:calc(100px + env(safe-area-inset-bottom)); background:linear-gradient(135deg,#ff7a8f,#c09bff); box-shadow:0 12px 30px rgba(192,155,255,.45); }
+    .fab svg{ stroke:#fff; }
+    .container{ padding-bottom:calc(124px + env(safe-area-inset-bottom)); }
+    body[data-tab="inicio"] header.top{ display:none; }
+    .view-head p{ display:none; }
+    .view-head h2{ font-size:36px; line-height:1; background:linear-gradient(100deg,#fff,#7dffd9 55%,#c09bff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  }
+  /* Início */
+  .hero{ position:relative; overflow:hidden; margin:-14px -14px 0; padding:calc(env(safe-area-inset-top) + 20px) 22px 74px; clip-path:polygon(0 0,100% 0,100% 90%,0 100%);
+    background:radial-gradient(120% 90% at 88% -10%,rgba(124,77,255,.55),transparent 55%),radial-gradient(90% 70% at 0% 35%,rgba(0,224,184,.38),transparent 60%),radial-gradient(70% 60% at 100% 95%,rgba(255,79,139,.4),transparent 60%),linear-gradient(160deg,#151b36,#0c0f1e); }
+  .hero::after{ content:""; position:absolute; inset:0; opacity:.14; mix-blend-mode:overlay; pointer-events:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .7 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+  .hero > *{ position:relative; z-index:1; }
+  .hero .pt{ position:absolute !important; bottom:-10px; border-radius:50%; opacity:0; z-index:0; translate:0 calc(var(--sy,0)*-.25px); animation:ptRise linear infinite; }
+  .hero .ring{ position:absolute !important; border:1px solid rgba(255,255,255,.12); border-radius:50%; z-index:0; translate:0 calc(var(--sy,0)*-.12px); }
+  .hero .r1{ width:300px; height:300px; right:-120px; top:-60px; border-style:dashed; animation:spin 60s linear infinite; }
+  .hero .r2{ width:180px; height:180px; left:-70px; bottom:30px; animation:spin 40s linear infinite reverse; }
+  @keyframes ptRise{ 0%{ transform:translateY(0) scale(.6); opacity:0; } 15%{ opacity:.9; } 100%{ transform:translateY(-330px) scale(1.2); opacity:0; } }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .hero-top{ display:flex; justify-content:space-between; align-items:center; }
+  .hero-brand{ display:flex; align-items:center; gap:8px; font:800 13px 'Sora',sans-serif; letter-spacing:.22em; }
+  .hero-brand span{ width:26px; height:26px; border-radius:9px 3px 9px 3px; display:grid; place-items:center; background:linear-gradient(135deg,#34e3b0,#c09bff); color:#0a0d14; letter-spacing:0; }
+  .hero-mes{ font:600 12px 'Inter',sans-serif; padding:6px 12px; border-radius:100px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); text-transform:capitalize; }
+  .hero-k{ margin-top:34px; font:700 11px 'Inter',sans-serif; letter-spacing:.28em; color:rgba(255,255,255,.55); }
+  .hero-num{ font:800 clamp(42px,13.5vw,66px)/1.05 'Sora',sans-serif; letter-spacing:-.045em; margin-top:4px; background:linear-gradient(100deg,#fff 5%,#7dffd9 48%,#c09bff 95%); -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 0 22px rgba(52,227,176,.35)); }
+  .hero-num.neg{ background:linear-gradient(100deg,#fff,#ff9aa9 60%,#ff7a8f); -webkit-background-clip:text; background-clip:text; filter:drop-shadow(0 0 22px rgba(255,122,143,.4)); }
+  .hero-proj{ font-size:13px; color:rgba(255,255,255,.65); margin-top:6px; }
+  .meter{ margin-top:22px; }
+  .meter-h{ display:flex; justify-content:space-between; font-size:11.5px; color:rgba(255,255,255,.7); margin-bottom:8px; gap:8px; }
+  .mt-bar{ position:relative; height:12px; border-radius:100px 4px 100px 4px; background:rgba(255,255,255,.1); overflow:visible; display:flex; }
+  .mt-bar i{ height:100%; display:block; } .mt-bar .real{ background:linear-gradient(90deg,#34e3b0,#4fd1e8); border-radius:100px 0 0 4px; }
+  .mt-bar .prev{ background:repeating-linear-gradient(45deg,#ffcb5c 0 4px,rgba(255,203,92,.25) 4px 8px); }
+  .mt-bar s{ position:absolute; top:-5px; bottom:-5px; width:2px; background:#fff; box-shadow:0 0 10px #fff; }
+  .acoes{ position:relative; z-index:3; display:flex; align-items:center; justify-content:center; gap:14px; margin:-58px 0 0; }
+  .ac{ all:unset; cursor:pointer; box-sizing:border-box; flex:1; max-width:130px; height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; font:700 13px 'Sora',sans-serif; color:#fff; -webkit-tap-highlight-color:transparent; transition:transform .15s; }
+  .ac b{ font-size:22px; line-height:1; } .ac:active{ transform:scale(.93) rotate(0); }
+  .ac-d{ background:linear-gradient(135deg,#ff7a8f,#d94f8a); border-radius:26px 8px 26px 8px; transform:rotate(-4deg); box-shadow:0 12px 26px rgba(255,90,130,.35); }
+  .ac-r{ background:linear-gradient(135deg,#34e3b0,#1fa7c4); border-radius:8px 26px 8px 26px; transform:rotate(4deg); box-shadow:0 12px 26px rgba(52,227,176,.3); color:#04130e; }
+  .mic-hero{ all:unset; cursor:pointer; box-sizing:border-box; width:104px; height:104px; flex:none; border-radius:50% 46% 52% 48%; display:grid; place-items:center; position:relative; color:#fff;
+    background:conic-gradient(from 200deg,#c09bff,#6aa8ff,#34e3b0,#ffcb5c,#ff7a8f,#c09bff); box-shadow:0 0 0 6px rgba(16,18,27,.9),0 14px 40px rgba(192,155,255,.55); animation:blobby 7s ease-in-out infinite; -webkit-tap-highlight-color:transparent; }
+  .mic-hero::before{ content:""; position:absolute; inset:5px; border-radius:inherit; background:#12152a; } .mic-hero svg,.mic-hero span{ position:relative; }
+  .mic-hero svg{ width:34px; height:34px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; } .mic-hero span{ position:absolute; top:12px; right:14px; font-size:15px; }
+  .mic-hero:active{ transform:scale(.92); }
+  @keyframes blobby{ 50%{ border-radius:44% 54% 46% 56%; filter:hue-rotate(25deg); } }
+  .acoes-lbl{ text-align:center; font-size:11.5px; color:var(--text-muted); margin:12px 18px 0; }
+  .sec{ margin-top:30px; } .sec h3{ font:800 20px 'Sora',sans-serif; letter-spacing:-.03em; margin:0 0 14px; display:flex; align-items:center; gap:10px; }
+  .sec h3::after{ content:""; flex:1; height:1px; background:linear-gradient(90deg,rgba(255,255,255,.18),transparent); }
+  .reveal{ opacity:0; transform:translateY(26px); transition:opacity .7s cubic-bezier(.2,.8,.2,1),transform .7s cubic-bezier(.2,.8,.2,1); } .reveal.in{ opacity:1; transform:none; }
+  .radar{ display:flex; gap:12px; overflow-x:auto; margin:0 -14px; padding:10px 14px 16px; scroll-snap-type:x mandatory; scrollbar-width:none; } .radar::-webkit-scrollbar{ display:none; }
+  .rc{ flex:none; width:150px; scroll-snap-align:start; padding:14px; border-radius:22px 6px 22px 6px; background:linear-gradient(160deg,rgba(192,155,255,.2),rgba(255,255,255,.04)); border:1px solid rgba(255,255,255,.1); transform:rotate(var(--r)); position:relative; overflow:hidden; }
+  .rc em{ font:800 34px/1 'Sora',sans-serif; font-style:normal; letter-spacing:-.04em; } .rc span{ font-size:11px; text-transform:uppercase; letter-spacing:.14em; color:var(--text-secondary); margin-left:4px; }
+  .rc p{ margin:10px 0 8px; font-size:12.5px; height:34px; overflow:hidden; line-height:1.3; } .rc b{ font:700 15px 'JetBrains Mono',monospace; }
+  .rc u{ position:absolute; top:10px; right:10px; font-size:9.5px; text-decoration:none; text-transform:uppercase; letter-spacing:.08em; color:#fff; background:var(--rose); padding:2px 7px; border-radius:100px; }
+  .rc.atr{ background:linear-gradient(160deg,rgba(255,122,143,.3),rgba(255,255,255,.04)); }
+  .chips{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .chip-n{ padding:14px 14px 14px 16px; border-radius:6px 22px 6px 22px; border-left:3px solid var(--c); background:linear-gradient(145deg,color-mix(in srgb,var(--c) 26%,transparent),rgba(255,255,255,.03)); transform:rotate(calc((var(--i) - 1.5)*1.3deg)); }
+  .chip-n:nth-child(even){ margin-top:16px; margin-bottom:-16px; } .chip-n small{ display:block; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-secondary); }
+  .chip-n b{ font:700 16px 'JetBrains Mono',monospace; display:block; margin-top:6px; color:var(--c); }
+  #topMes{ margin-top:18px; } .tp{ display:grid; grid-template-columns:38px 1fr auto; gap:12px; align-items:center; padding:10px 0; }
+  .tp-i{ width:38px; height:38px; display:grid; place-items:center; border-radius:12px 4px 12px 4px; background:rgba(255,255,255,.07); font-size:18px; }
+  .tp p{ margin:0 0 6px; font-size:13px; } .tp i{ display:block; height:5px; border-radius:100px; background:linear-gradient(90deg,#c09bff,#ff7a8f); box-shadow:0 0 12px rgba(255,122,143,.5); } .tp b{ font:600 13px 'JetBrains Mono',monospace; }
+  .atalhos{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; } .atalhos button,.mais-it{ all:unset; cursor:pointer; box-sizing:border-box; display:flex; flex-direction:column; gap:6px; padding:16px 12px; border-radius:20px 6px 20px 6px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.09); font-size:22px; }
+  .atalhos button:nth-child(2){ border-radius:6px 20px 6px 20px; margin-top:10px; } .atalhos span,.mais-it b{ font:700 13px 'Sora',sans-serif; } .mais-it{ margin-bottom:10px; } .mais-it small{ font-size:12px; color:var(--text-muted); }
+  .atalhos button:active,.mais-it:active{ transform:scale(.96); }
+  @media(min-width:721px){ #view-inicio{ display:none !important; } }
 </style>
 </head>
 <body>
@@ -519,6 +596,7 @@
   </header>
  
   <nav class="tabs">
+    <button data-tab="inicio" class="mobile-only"><span class="nav-ico"><svg class="icon" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span><span>Início</span></button>
     <button data-tab="despesas" class="active">
       <span class="nav-ico"><svg class="icon" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h11l4 4v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M16 12h3"/></svg></span>
       <span>Despesas</span>
@@ -543,8 +621,11 @@
       <span class="nav-ico"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 0 1 4 0v.09A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 0 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15Z"/></svg></span>
       <span>Config.</span>
     </button>
+    <button data-more="1" class="mobile-only"><span class="nav-ico"><svg class="icon" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></span><span>Mais</span></button>
   </nav>
  
+  <section class="view" id="view-inicio"><div id="inicioBody"></div></section>
+
   <!-- DESPESAS -->
   <section class="view active" id="view-despesas">
     <div class="card" id="vencCard" style="display:none;"><div class="card-title">⏰ Vencimentos — atrasados e próximos 14 dias</div><div id="vencBody"></div></div>
@@ -1043,6 +1124,7 @@ function renderSaldoTotal(){
   el.className = 'val mono ' + (total>=0?'pos':'neg');
   const proj = total + netPrev(()=>true), ep = document.getElementById('saldoProjDisplay');
   if(ep){ ep.textContent = fmt(proj); ep.style.color = proj>=0?'var(--emerald)':'var(--rose)'; }
+  renderInicio();
 }
  
 /* ---------- DESPESAS ---------- */
@@ -2069,11 +2151,13 @@ function openDespesaModal(id, defaultMes){
         <div class="parcela-preview" id="parcelaResumo"></div>
       </div>`}
  
-      <div class="field"><label>Categoria</label><select id="fCat">${optionsHtml(state.categorias, d?d.categoriaId:(cat?cat.id:null))}</select></div>
+      <details class="field full adv" ${d?'open':''}><summary>⚙️ Categoria, tipo, classe… <em>(opcional — a IA preenche ao salvar)</em></summary><div class="form-grid" style="margin-top:10px;">
+      <div class="field"><label>Categoria</label><select id="fCat"><option value="">✨ Automático (IA)</option>${optionsHtml(state.categorias, d?d.categoriaId:null)}</select></div>
       <div class="field"><label>Subcategoria</label><input id="fSub" list="subList" value="${d?(d.subcategoria||''):''}" placeholder="Selecione ou digite"><datalist id="subList"></datalist></div>
-      <div class="field"><label>Tipo</label><select id="fTipo">${optionsHtml(state.tipos, d?d.tipoId:null)}</select></div>
-      <div class="field"><label>Classe</label><select id="fClasse">${optionsHtml(state.classes, d?d.classeId:null)}</select></div>
-      <div class="field full"><label>Essencialidade (esse gasto é evitável?)</label><select id="fEss"><option value="">Não classificado</option>${Object.entries(ESS).map(([k,l])=>`<option value="${k}" ${d&&d.essencialidade===k?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="field"><label>Tipo</label><select id="fTipo"><option value="">${d?'Não definido':'✨ Automático (IA)'}</option>${optionsHtml(state.tipos, d?d.tipoId:null)}</select></div>
+      <div class="field"><label>Classe</label><select id="fClasse"><option value="">${d?'Não definida':'✨ Automático (IA)'}</option>${optionsHtml(state.classes, d?d.classeId:null)}</select></div>
+      <div class="field full"><label>Essencialidade (esse gasto é evitável?)</label><select id="fEss"><option value="">${d?'Não classificado':'✨ Automático (IA)'}</option>${Object.entries(ESS).map(([k,l])=>`<option value="${k}" ${d&&d.essencialidade===k?'selected':''}>${l}</option>`).join('')}</select></div>
+      </div></details>
  
       ${d?'':`
       <div class="field full" id="tipoRecorrenciaWrap" style="display:none;">
@@ -2221,6 +2305,7 @@ function openDespesaModal(id, defaultMes){
     const mesInicial = document.getElementById('fMes').value;
     const pago = document.getElementById('fPago').checked;
     if(!base.descricao || !valorInformado || !mesInicial){ toast('Preencha descrição, valor e mês.'); return; }
+    if(!d){ document.getElementById('mSave').disabled=true; await autoClassificar(base,valorInformado); }
  
     if(d){
       const camposComuns = {
@@ -2560,19 +2645,22 @@ function openMesRetroModal(){
 /* ---------- eventos gerais / navegação ---------- */
 let activeTab = 'despesas';
 document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  if(!btn.dataset.tab) return;
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     document.querySelectorAll('section.view').forEach(v=>v.classList.remove('active'));
     document.getElementById('view-'+btn.dataset.tab).classList.add('active');
-    activeTab = btn.dataset.tab;
+    activeTab = btn.dataset.tab; document.body.dataset.tab = activeTab;
+    if(['contas','dashboards','config'].includes(activeTab)) document.querySelector('nav.tabs [data-more]').classList.add('active');
+    scrollTo(0,0);
     updateFab();
     if(activeTab==='dashboards'){ initDashboards(); renderDashboards(); }
   });
 });
 function updateFab(){
   const fab = document.getElementById('fabAdd');
-  fab.style.display = (activeTab==='config' || activeTab==='dashboards') ? 'none' : '';
+  fab.style.display = (activeTab==='config' || activeTab==='dashboards' || activeTab==='inicio') ? 'none' : '';
   fab.dataset.l = {despesas:'Nova despesa',receitas:'Nova receita',contas:'Nova conta',cartoes:'Novo cartão'}[activeTab]||'';
 }
 document.getElementById('fabAdd').addEventListener('click', ()=>{
@@ -2860,6 +2948,7 @@ function renderVencimentos(){
   const lim=new Date(hoje); lim.setDate(lim.getDate()+14);
   const lista=[...itens,...faturas.values()].map(x=>{const [y,m]=x.mes.split('-').map(Number); return {...x,data:new Date(y,m-1,Math.min(x.dia,new Date(y,m,0).getDate()))};})
     .filter(x=>x.data<=lim).sort((a,b)=>a.data-b.data);
+  vencLista=lista; renderInicio();
   card.style.display=lista.length?'block':'none';
   el.innerHTML=lista.map(x=>{
     const atr=x.data<hoje, dd=Math.round((x.data-hoje)/864e5);
@@ -3302,6 +3391,81 @@ function openChatModal(){
   inp.focus();
 }
 document.getElementById('btnChat').addEventListener('click',openChatModal);
+
+
+/* ---------- Classificação automática no cadastro ---------- */
+function promptClassificar(){
+  return `Classifique UMA despesa. Responda SOMENTE JSON: {"categoriaId":"","subcategoria":"","tipoId":"","classeId":"","essencialidade":"essencial|reduzivel|superfluo"}. Use SOMENTE ids do contexto. Priorize regras_do_usuario e historico; depois bom senso. "tipo" é a recorrência (fixa, mensal variável, ocasional, variável); "classe" é o grupo do orçamento 50/30/20. subcategoria: uma existente da categoria, ou vazio. CONTEXTO: ${JSON.stringify(contextoIA())}`;
+}
+async function autoClassificar(base,valor){
+  const falta=()=>!base.categoriaId||!base.tipoId||!base.classeId||!base.essencialidade||!base.subcategoria;
+  if(!falta()) return;
+  const k=normalizar(base.descricao.replace(/\s*\(\d+\/\d+\)$/,'')), sim=state.despesas.filter(d=>normalizar((d.descricao||'').replace(/\s*\(\d+\/\d+\)$/,''))===k);
+  if(sim.length){ const m=f=>modaDe(sim.map(f))||null;
+    base.categoriaId=base.categoriaId||m(d=>d.categoriaId); base.subcategoria=base.subcategoria||m(d=>d.subcategoria)||''; base.tipoId=base.tipoId||m(d=>d.tipoId); base.classeId=base.classeId||m(d=>d.classeId); base.essencialidade=base.essencialidade||m(d=>d.essencialidade); }
+  if(!falta()) return;
+  toast('✨ Classificando…');
+  try{
+    const r=await Promise.race([chamarIA([{role:'system',content:promptClassificar()},{role:'user',content:JSON.stringify({descricao:base.descricao,valor,categoriaId:base.categoriaId||''})}]),new Promise((_,rj)=>setTimeout(()=>rj(new Error('tempo esgotado')),15000))]);
+    const c=r.classificacao||r;
+    if(!base.categoriaId&&byId(state.categorias,c.categoriaId)) base.categoriaId=c.categoriaId;
+    if(!base.subcategoria) base.subcategoria=c.subcategoria||'';
+    if(!base.tipoId&&byId(state.tipos,c.tipoId)) base.tipoId=c.tipoId;
+    if(!base.classeId&&byId(state.classes,c.classeId)) base.classeId=c.classeId;
+    if(!base.essencialidade&&ESS[c.essencialidade]) base.essencialidade=c.essencialidade;
+    toast('✨ '+[(byId(state.categorias,base.categoriaId)||{}).nome,ESS[base.essencialidade],(byId(state.tipos,base.tipoId)||{}).nome].filter(Boolean).join(' · '));
+  }catch(e){ toast('Não consegui classificar agora — edite depois, se quiser.'); }
+}
+
+/* ---------- Início (mobile) ---------- */
+let vencLista=[];
+function irPara(t){ const b=document.querySelector(`nav.tabs button[data-tab="${t}"]`); if(b) b.click(); }
+function abrirMais(){
+  openModal(`<div class="modal-head"><h3>Mais</h3><button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>`+[['dashboards','📊','Dashboard','Gráficos e indicadores'],['contas','🏦','Contas e metas','Saldos, transferências'],['config','⚙️','Configurações','Categorias, IA, backup']].map(([t,i,n,d])=>`<button class="mais-it" data-go="${t}"><span>${i}</span><b>${n}</b><small>${d}</small></button>`).join(''));
+  document.getElementById('mClose').addEventListener('click',closeModal);
+  modalBox.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{ closeModal(); irPara(b.dataset.go); }));
+}
+function initInicio(){
+  const el=document.getElementById('inicioBody');
+  const pts=Array.from({length:14},(_,i)=>{ const c=PAL[i%PAL.length], z=4+(i*5)%9; return `<i class="pt" style="left:${(i*83+11)%96}%;width:${z}px;height:${z}px;animation-duration:${9+(i*3)%8}s;animation-delay:-${(i*2.3)%11}s;background:${c};box-shadow:0 0 14px ${c}"></i>`; }).join('');
+  el.innerHTML=`<div class="hero" id="hero">${pts}<i class="ring r1"></i><i class="ring r2"></i>
+    <div class="hero-top"><div class="hero-brand"><span>$</span>COFRE</div><div class="hero-mes" id="heroMes"></div></div>
+    <div class="hero-k">SALDO REAL</div><div class="hero-num" id="heroNum">R$ 0,00</div><div class="hero-proj" id="heroProj"></div><div class="meter" id="heroMeter"></div></div>
+    <div class="acoes"><button class="ac ac-d" id="acDesp"><b>−</b>Despesa</button>
+      <button class="mic-hero" id="acMic" aria-label="Falar ou escrever um gasto"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></svg><span>✨</span></button>
+      <button class="ac ac-r" id="acRec"><b>+</b>Receita</button></div>
+    <div class="acoes-lbl">toque no ✨ e fale: “gastei 40 no mercado no débito”</div>
+    <div class="sec reveal"><h3>Radar de vencimentos</h3><div class="radar" id="radar"></div></div>
+    <div class="sec reveal"><h3>Mês em números</h3><div class="chips" id="chips"></div></div>
+    <div class="sec reveal"><h3>Maiores gastos do mês</h3><div id="topMes"></div></div>
+    <div class="sec reveal"><h3>Ir para</h3><div class="atalhos"><button data-go="dashboards">📊<span>Dashboard</span></button><button data-go="contas">🏦<span>Contas</span></button><button data-go="config">⚙️<span>Ajustes</span></button></div></div>`;
+  document.getElementById('acDesp').addEventListener('click',()=>openDespesaModal(null,todayKey()));
+  document.getElementById('acRec').addEventListener('click',()=>openReceitaModal(null));
+  document.getElementById('acMic').addEventListener('click',()=>{ openIAModal(); setTimeout(()=>{ const m=document.getElementById('iaMic'); if(m) m.click(); },150); });
+  el.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>irPara(b.dataset.go)));
+  const hero=document.getElementById('hero'); addEventListener('scroll',()=>hero.style.setProperty('--sy',Math.min(scrollY,500)),{passive:true});
+  const io=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }),{threshold:.12});
+  el.querySelectorAll('.reveal').forEach(n=>io.observe(n));
+  document.querySelector('nav.tabs [data-more]').addEventListener('click',abrirMais);
+}
+function renderInicio(){
+  const n=document.getElementById('heroNum'); if(!n) return;
+  const mes=todayKey(), total=state.contas.reduce((s,c)=>s+saldoConta(c.id),0), proj=total+netPrev(()=>true);
+  animarNumero(n,total); n.classList.toggle('neg',total<0);
+  document.getElementById('heroMes').textContent=monthLabel(mes);
+  document.getElementById('heroProj').innerHTML=`projetado <b style="color:${proj>=0?'#7dffd9':'#ff9aa9'}">${fmt(proj)}</b> após tudo que está lançado`;
+  const S=(a,f)=>a.filter(f).reduce((s,x)=>s+Number(x.valor||0),0);
+  const rr=S(state.receitas,r=>r.mes===mes&&receitaRecebida(r)), rp=S(state.receitas,r=>r.mes===mes&&!receitaRecebida(r)), dr=S(state.despesas,d=>d.mes===mes&&d.pago), dp=S(state.despesas,d=>d.mes===mes&&!d.pago);
+  const renda=rr+rp, desp=dr+dp, base=Math.max(renda,desp,1), pct=renda>0?desp/renda*100:0;
+  document.getElementById('heroMeter').innerHTML=`<div class="meter-h"><span>${pct.toFixed(0)}% da renda do mês comprometida</span><span>${fmt(renda-desp)} livre</span></div><div class="mt-bar"><i class="real" style="width:${dr/base*100}%"></i><i class="prev" style="width:${dp/base*100}%"></i><s style="left:${Math.min(renda/base*100,100)}%"></s></div>`;
+  document.getElementById('chips').innerHTML=[['Entrou',rr,'--emerald'],['Saiu',dr,'--rose'],['Falta pagar',dp,'--amber'],['Vai entrar',rp,'--blue']].map(([l,v,c],i)=>`<div class="chip-n" style="--c:var(${c});--i:${i}"><small>${l}</small><b>${fmt(v)}</b></div>`).join('');
+  const hoje=new Date(); hoje.setHours(0,0,0,0);
+  document.getElementById('radar').innerHTML=vencLista.slice(0,8).map((x,i)=>`<div class="rc ${x.data<hoje?'atr':''}" style="--r:${i%2?1.6:-1.6}deg"><em>${x.data.getDate()}</em><span>${x.data.toLocaleDateString('pt-BR',{month:'short'}).replace('.','')}</span><p>${esc(x.desc)}</p><b>${fmt(x.valor)}</b>${x.data<hoje?'<u>atrasada</u>':''}</div>`).join('')||'<div class="empty-msg" style="width:100%">Nada vencendo nos próximos 14 dias 🎉</div>';
+  const top=state.despesas.filter(d=>d.mes===mes).sort((a,b)=>b.valor-a.valor).slice(0,5), mx=top[0]?Number(top[0].valor):1;
+  document.getElementById('topMes').innerHTML=top.map(d=>{ const c=byId(state.categorias,d.categoriaId); return `<div class="tp"><span class="tp-i">${c?c.icone:'💳'}</span><div><p>${esc(d.descricao)}</p><i style="width:${Math.max(8,d.valor/mx*100)}%"></i></div><b>${fmt(d.valor)}</b></div>`; }).join('')||'<div class="empty-msg">Nenhuma despesa neste mês ainda.</div>';
+}
+initInicio(); renderInicio();
+if(matchMedia('(max-width:720px)').matches) irPara('inicio');
 
 openMonths.add(todayKey());
 initDashboards();

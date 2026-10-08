@@ -575,6 +575,33 @@
   .atalhos button:nth-child(2){ border-radius:6px 20px 6px 20px; margin-top:10px; } .atalhos span,.mais-it b{ font:700 13px 'Sora',sans-serif; } .mais-it{ margin-bottom:10px; } .mais-it small{ font-size:12px; color:var(--text-muted); }
   .atalhos button:active,.mais-it:active{ transform:scale(.96); }
   @media(min-width:721px){ #view-inicio{ display:none !important; } }
+  /* ===== Ajuste: visual mais sóbrio (sem inclinações, brilhos e partículas) ===== */
+  .hero{ clip-path:polygon(0 0,100% 0,100% 94%,0 100%); background:radial-gradient(110% 80% at 90% -10%,rgba(106,168,255,.26),transparent 55%),radial-gradient(90% 70% at 0% 40%,rgba(52,227,176,.18),transparent 60%),linear-gradient(165deg,#151b30,#0e111d); }
+  .hero::after{ opacity:.05; }
+  .hero .pt,.hero .ring{ display:none !important; }
+  .hero-num,.hero-num.neg{ filter:none; -webkit-background-clip:text; background-clip:text; }
+  .hero-num{ background-image:linear-gradient(100deg,#fff 25%,#c6f7e8); }
+  .hero-num.neg{ background-image:linear-gradient(100deg,#fff 25%,#ffc2cb); }
+  .hero-brand span{ border-radius:8px; background:var(--emerald); }
+  .hero-mes{ background:rgba(255,255,255,.06); }
+  .mt-bar{ border-radius:100px; } .mt-bar .real{ background:var(--emerald); border-radius:100px 0 0 100px; } .mt-bar s{ box-shadow:none; }
+  .ac{ border-radius:18px !important; transform:none !important; box-shadow:none !important; height:60px; }
+  .ac:active{ transform:scale(.97) !important; }
+  .ac-d{ background:linear-gradient(135deg,#f0687f,#d4577a); } .ac-r{ background:linear-gradient(135deg,#34d9a8,#22b8b0); }
+  .mic-hero{ width:88px; height:88px; border-radius:50%; background:linear-gradient(135deg,#34e3b0,#2cc7c4); box-shadow:0 0 0 5px rgba(16,18,27,.9),0 10px 24px rgba(52,227,176,.28); animation:none; }
+  .mic-hero::before,.mic-hero span{ display:none; } .mic-hero svg{ stroke:#08120e; }
+  .sec h3{ font-size:18px; }
+  .reveal{ transform:translateY(10px); transition-duration:.4s; }
+  .rc{ transform:none; border-radius:16px; background:rgba(255,255,255,.05); } .rc.atr{ background:rgba(255,122,143,.12); border-color:rgba(255,122,143,.35); }
+  .chip-n{ transform:none; border-radius:14px; margin:0 !important; background:rgba(255,255,255,.04); }
+  .tp-i{ border-radius:12px; } .tp i{ background:linear-gradient(90deg,#6aa8ff,#34e3b0); box-shadow:none; }
+  .atalhos button,.mais-it{ border-radius:16px !important; margin-top:0 !important; }
+  @media(max-width:720px){
+    nav.tabs button.active .nav-ico{ filter:none; }
+    nav.tabs button.active{ background:rgba(52,227,176,.12); }
+    .fab{ background:linear-gradient(135deg,#3ceab6,#2cc7c4); box-shadow:0 10px 24px rgba(52,227,176,.3); } .fab svg{ stroke:#08120e; }
+    .view-head h2{ font-size:28px; background:none; -webkit-background-clip:border-box; background-clip:border-box; color:var(--text-primary); }
+  }
 </style>
 </head>
 <body>
@@ -3434,7 +3461,7 @@ function initInicio(){
     <div class="acoes"><button class="ac ac-d" id="acDesp"><b>−</b>Despesa</button>
       <button class="mic-hero" id="acMic" aria-label="Falar ou escrever um gasto"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></svg><span>✨</span></button>
       <button class="ac ac-r" id="acRec"><b>+</b>Receita</button></div>
-    <div class="acoes-lbl">toque no ✨ e fale: “gastei 40 no mercado no débito”</div>
+    <div class="acoes-lbl">toque no microfone e fale: “gastei 40 no mercado no débito”</div>
     <div class="sec reveal"><h3>Radar de vencimentos</h3><div class="radar" id="radar"></div></div>
     <div class="sec reveal"><h3>Mês em números</h3><div class="chips" id="chips"></div></div>
     <div class="sec reveal"><h3>Maiores gastos do mês</h3><div id="topMes"></div></div>

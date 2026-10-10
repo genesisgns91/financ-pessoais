@@ -8,10 +8,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Cofre">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2310121b'/%3E%3Ccircle cx='50' cy='50' r='34' fill='none' stroke='%232fe0a8' stroke-width='9'/%3E%3Cpath d='M50 16 A34 34 0 0 1 82 55' fill='none' stroke='%23ff6b81' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
+<script>try{if(sessionStorage.getItem("cofre_sp"))document.documentElement.classList.add("no-splash");else sessionStorage.setItem("cofre_sp","1");}catch(e){}</script>
 <title>Cofre — Controle Financeiro Pessoal</title>
-<link rel="icon" type="image/png" href="icone.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -602,9 +603,45 @@
     .fab{ background:linear-gradient(135deg,#3ceab6,#2cc7c4); box-shadow:0 10px 24px rgba(52,227,176,.3); } .fab svg{ stroke:#08120e; }
     .view-head h2{ font-size:28px; background:none; -webkit-background-clip:border-box; background-clip:border-box; color:var(--text-primary); }
   }
+  /* ===== Abertura (splash) ===== */
+  #splash{ position:fixed; inset:0; z-index:9999; background:#10121b; display:flex; align-items:center; justify-content:center; overflow:hidden; transition:opacity .45s ease .2s; animation:spFail .01s 9s forwards; }
+  @keyframes spFail{ to{ opacity:0; visibility:hidden; } }
+  .no-splash #splash{ display:none; }
+  @media(min-width:721px){ #splash{ display:none; } }
+  #splash.sai{ opacity:0; pointer-events:none; }
+  .sp-glow{ position:absolute; width:440px; height:440px; border-radius:50%; background:radial-gradient(circle,rgba(52,227,176,.22),rgba(106,168,255,.1) 45%,transparent 70%); opacity:0; animation:spGlow 1.6s .45s ease-out forwards; }
+  @keyframes spGlow{ 0%{ opacity:0; transform:scale(.5); } 60%{ opacity:1; } 100%{ opacity:.7; transform:scale(1); } }
+  .sp-logo{ width:132px; height:132px; overflow:visible; position:relative; animation:spUp .7s 1.45s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes spUp{ from{ transform:translateY(0); } to{ transform:translateY(-38px); } }
+  #splash.sai .sp-logo{ animation:none; transform:translateY(-38px) scale(9); transition:transform .65s cubic-bezier(.65,0,.35,1); }
+  #splash.sai .sp-glow{ animation:none; opacity:0; }
+  .sp-ring{ transform-origin:100px 100px; animation:spRing 1.25s .4s cubic-bezier(.6,0,.2,1) both; }
+  @keyframes spRing{ from{ transform:rotate(0); } to{ transform:rotate(360deg); } }
+  .sp-ticks{ transform-origin:100px 100px; animation:spDial 1.3s .5s cubic-bezier(.4,0,.2,1) both; }
+  @keyframes spDial{ 0%{ transform:rotate(0); } 40%{ transform:rotate(105deg); } 50%{ transform:rotate(90deg); } 80%{ transform:rotate(225deg); } 90%{ transform:rotate(210deg); } 100%{ transform:rotate(210deg); } }
+  .sp-coin{ transform-origin:100px 100px; animation:spFlip .8s 1.05s cubic-bezier(.4,0,.2,1) both; }
+  @keyframes spFlip{ 0%,100%{ transform:scaleX(1); } 50%{ transform:scaleX(0); } }
+  .sp-word{ position:absolute; left:0; right:0; top:calc(50% + 44px); display:flex; justify-content:center; gap:.2em; font:800 30px 'Sora','Inter',sans-serif; letter-spacing:.14em; color:#f1f2f9; }
+  .sp-word span{ opacity:0; transform:translateY(14px); animation:spLetter .5s cubic-bezier(.2,.8,.2,1) both; animation-delay:calc(1.55s + var(--i)*.06s); }
+  @keyframes spLetter{ to{ opacity:1; transform:none; } }
+  .sp-tag{ position:absolute; left:0; right:0; top:calc(50% + 96px); text-align:center; font:500 12.5px 'Inter',sans-serif; color:#9ba0c2; opacity:0; animation:spFade .6s 2s both; }
+  .sp-bar{ position:absolute; left:50%; top:calc(50% + 124px); width:120px; height:3px; margin-left:-60px; border-radius:3px; background:rgba(255,255,255,.08); overflow:hidden; opacity:0; animation:spFade .4s 1.9s both; }
+  .sp-bar i{ display:block; height:100%; width:45%; border-radius:3px; background:linear-gradient(90deg,#34e3b0,#6aa8ff); animation:spBar 1.1s ease-in-out infinite; }
+  @keyframes spFade{ to{ opacity:1; } } @keyframes spBar{ from{ transform:translateX(-100%); } to{ transform:translateX(260%); } }
+  #splash.sai .sp-word,#splash.sai .sp-tag,#splash.sai .sp-bar{ animation:none; opacity:0; }
+  @media(prefers-reduced-motion:reduce){ #splash *{ animation-duration:.01s !important; animation-delay:0s !important; } }
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true">
+  <div class="sp-glow"></div>
+  <svg class="sp-logo" viewBox="0 0 200 200"><defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#34e3b0"/><stop offset=".55" stop-color="#6aa8ff"/><stop offset="1" stop-color="#c09bff"/></linearGradient><linearGradient id="g2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb36b"/><stop offset="1" stop-color="#ff5f86"/></linearGradient><linearGradient id="g3" gradientUnits="userSpaceOnUse" x1="0" y1="54" x2="0" y2="146"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#9bf2d6"/></linearGradient></defs><g transform="rotate(-90 100 100)" fill="none" stroke-linecap="round" stroke-width="12"><g class="sp-ring"><circle cx="100" cy="100" r="82" stroke="url(#g1)" stroke-dasharray="300 215"/><circle cx="100" cy="100" r="82" stroke="url(#g2)" stroke-dasharray="140 375" stroke-dashoffset="-336"/></g></g>
+<g class="sp-ticks" stroke="#9ba0c2" stroke-opacity=".6" stroke-width="3" stroke-linecap="round"><line x1="100" y1="30" x2="100" y2="36" transform="rotate(0 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(15 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(30 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(45 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(60 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(75 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(90 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(105 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(120 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(135 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(150 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(165 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(180 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(195 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(210 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(225 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(240 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(255 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(270 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(285 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(300 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(315 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(330 100 100)"/><line x1="100" y1="30" x2="100" y2="36" transform="rotate(345 100 100)"/></g>
+<g class="sp-coin"><circle cx="100" cy="100" r="48" fill="#12162a" stroke="#fff" stroke-opacity=".12" stroke-width="2"/><g fill="none" stroke="url(#g3)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"><path d="M123 79 C123 68 113 63 100 63 C86 63 77 70 77 81 C77 92 86 96 100 100 C114 104 123 108 123 119 C123 130 114 137 100 137 C86 137 76 131 76 121"/><path d="M100 54 V146"/></g></g></svg>
+  <div class="sp-word"><span style="--i:0">C</span><span style="--i:1">O</span><span style="--i:2">F</span><span style="--i:3">R</span><span style="--i:4">E</span></div>
+  <div class="sp-tag" id="spTag">Abrindo o cofre…</div>
+  <div class="sp-bar"><i></i></div>
+</div>
 <div class="container">
  
   <header class="top">
@@ -1118,7 +1155,7 @@ listen('classes','classes', ()=>{ renderDespesas(); renderConfigClasses(); rende
 listen('formasPagamento','formas', ()=>{ renderDespesas(); renderConfigFormas(); renderDashboards(); });
 listen('contas','contas', ()=>{ renderContas(); renderDespesas(); renderReceitas(); renderSaldoTotal(); renderCartoes(); renderDashboards(); });
 listen('cartoes','cartoes', ()=>{ renderDespesas(); renderContas(); renderCartoes(); renderSaldoTotal(); renderDashboards(); });
-listen('despesas','despesas', ()=>{ renderDespesas(); renderContas(); renderSaldoTotal(); renderCartoes(); renderDashboards(); });
+listen('despesas','despesas', ()=>{ splashPronto('dados'); renderDespesas(); renderContas(); renderSaldoTotal(); renderCartoes(); renderDashboards(); });
 listen('receitas','receitas', ()=>{ renderReceitas(); renderContas(); renderSaldoTotal(); renderDashboards(); });
 listen('transferencias','transferencias', ()=>{ renderContas(); renderSaldoTotal(); renderDashboards(); });
 listen('metas','metas', ()=>{ renderContas(); });
@@ -2783,6 +2820,7 @@ function renderParcelamentos(){
 let started=false;
 onAuthStateChanged(auth,u=>{
   document.getElementById('loginGate').style.display=u?'none':'flex';
+  splashPronto('auth'); if(!u) splashPronto('dados'); else setSpTag('Sincronizando seus dados…');
   if(u&&!started){ started=true; startListeners(); }
 });
 document.getElementById('btnLogin').addEventListener('click',()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>toast('Falha no login: '+e.code)));
@@ -3493,6 +3531,19 @@ function renderInicio(){
 }
 initInicio(); renderInicio();
 if(matchMedia('(max-width:720px)').matches) irPara('inicio');
+
+
+/* ---------- Abertura: fecha quando o app e os dados estiverem prontos ---------- */
+const splashSt={min:false,auth:false,dados:false};
+function setSpTag(t){ const e=document.getElementById('spTag'); if(e) e.textContent=t; }
+function fecharSplash(){
+  const el=document.getElementById('splash'); if(!el||el.classList.contains('sai')) return;
+  const h=new Date().getHours(); setSpTag((h<12?'Bom dia':h<18?'Boa tarde':'Boa noite')+'!');
+  const vis=getComputedStyle(el).display!=='none';
+  setTimeout(()=>{ el.classList.add('sai'); if(vis&&navigator.vibrate) navigator.vibrate(20); setTimeout(()=>el.remove(),1100); },vis?450:0);
+}
+function splashPronto(k){ splashSt[k]=true; if(splashSt.min&&splashSt.auth&&splashSt.dados) fecharSplash(); }
+setTimeout(()=>splashPronto('min'),2300); setTimeout(fecharSplash,7000);
 
 openMonths.add(todayKey());
 initDashboards();

@@ -8,6 +8,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Cofre">
+<meta name="application-name" content="Cofre">
+<meta name="format-detection" content="telephone=no">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
 <script>try{if(sessionStorage.getItem("cofre_sp"))document.documentElement.classList.add("no-splash");else sessionStorage.setItem("cofre_sp","1");}catch(e){}</script>
@@ -630,6 +632,10 @@
   @keyframes spFade{ to{ opacity:1; } } @keyframes spBar{ from{ transform:translateX(-100%); } to{ transform:translateX(260%); } }
   #splash.sai .sp-word,#splash.sai .sp-tag,#splash.sai .sp-bar{ animation:none; opacity:0; }
   @media(prefers-reduced-motion:reduce){ #splash *{ animation-duration:.01s !important; animation-delay:0s !important; } }
+  .inst{ display:flex; align-items:center; gap:10px; margin:14px 0 0; padding:10px 12px; border-radius:14px; background:rgba(52,227,176,.1); border:1px solid rgba(52,227,176,.25); font-size:12.5px; }
+  .inst span{ flex:1; } .inst button{ all:unset; cursor:pointer; padding:7px 12px; border-radius:10px; background:var(--emerald); color:#08120e; font-weight:700; font-size:12px; }
+  .inst #instX{ background:none; color:var(--text-muted); padding:4px 8px; font-size:18px; }
+  @media(display-mode:standalone){ body{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; } input,textarea{ -webkit-user-select:text; user-select:text; } }
 </style>
 </head>
 <body>
@@ -946,7 +952,9 @@
       </div>
     </div>
     <div class="card cfg-view" id="cfg-dados" style="display:none;">
-      <div class="card-title">Backup e conta</div>
+      <div class="card-title">Aplicativo, backup e conta</div>
+      <div id="instStatus" class="pagar-com-note" style="display:block;margin-bottom:10px;"></div>
+      <button class="btn btn-primary" id="btnInstalar" style="margin-bottom:14px;">📲 Instalar aplicativo</button>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn btn-ghost" id="btnExport">Exportar backup (JSON)</button>
         <button class="btn btn-ghost" id="btnImport">Importar backup</button>
@@ -979,7 +987,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   initializeFirestore, getDocs, writeBatch, persistentLocalCache, persistentMultipleTabManager, collection, doc, addDoc, updateDoc, deleteDoc,
   onSnapshot, setDoc, getDoc
@@ -2820,10 +2828,16 @@ function renderParcelamentos(){
 let started=false;
 onAuthStateChanged(auth,u=>{
   document.getElementById('loginGate').style.display=u?'none':'flex';
-  splashPronto('auth'); if(!u) splashPronto('dados'); else setSpTag('Sincronizando seus dados…');
+  splashPronto('auth'); if(!u) splashPronto('dados'); else { setSpTag('Sincronizando seus dados…'); setTimeout(acaoURL,2700); }
   if(u&&!started){ started=true; startListeners(); }
 });
-document.getElementById('btnLogin').addEventListener('click',()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>toast('Falha no login: '+e.code)));
+getRedirectResult(auth).catch(()=>{});
+document.getElementById('btnLogin').addEventListener('click',async()=>{
+  const p=new GoogleAuthProvider();
+  try{ await signInWithPopup(auth,p); }
+  catch(e){ if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment','auth/web-storage-unsupported'].includes(e.code)) signInWithRedirect(auth,p);
+    else if(!['auth/popup-closed-by-user','auth/cancelled-popup-request'].includes(e.code)) toast('Falha no login: '+e.code); }
+});
 document.getElementById('btnLogout').addEventListener('click',()=>{ if(confirm('Sair da conta?')) signOut(auth).then(()=>location.reload()); });
 const COLS={categorias:'categorias',tipos:'tipos',classes:'classes',contas:'contas',formas:'formasPagamento',cartoes:'cartoes',despesas:'despesas',receitas:'receitas'};
 document.getElementById('btnExport').addEventListener('click',()=>{
@@ -3500,6 +3514,7 @@ function initInicio(){
       <button class="mic-hero" id="acMic" aria-label="Falar ou escrever um gasto"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></svg><span>✨</span></button>
       <button class="ac ac-r" id="acRec"><b>+</b>Receita</button></div>
     <div class="acoes-lbl">toque no microfone e fale: “gastei 40 no mercado no débito”</div>
+    <div id="instBanner"></div>
     <div class="sec reveal"><h3>Radar de vencimentos</h3><div class="radar" id="radar"></div></div>
     <div class="sec reveal"><h3>Mês em números</h3><div class="chips" id="chips"></div></div>
     <div class="sec reveal"><h3>Maiores gastos do mês</h3><div id="topMes"></div></div>
@@ -3544,6 +3559,40 @@ function fecharSplash(){
 }
 function splashPronto(k){ splashSt[k]=true; if(splashSt.min&&splashSt.auth&&splashSt.dados) fecharSplash(); }
 setTimeout(()=>splashPronto('min'),2300); setTimeout(fecharSplash,7000);
+
+
+/* ---------- Instalação como aplicativo + atalhos ---------- */
+const emApp=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+let promptInstall=null;
+addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); promptInstall=e; renderInstalar(); });
+addEventListener('appinstalled',()=>{ promptInstall=null; renderInstalar(); toast('Aplicativo instalado!'); });
+function abrirAjudaInstalar(){
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  openModal(`<div class="modal-head"><h3>📲 Instalar o Cofre</h3><button class="btn btn-icon" id="mClose">${svgIcon('x')}</button></div>
+    <div class="pagar-com-note" style="display:block;line-height:1.6;">${ios
+      ?'<b>iPhone/iPad (use o Safari):</b><br>1. Toque em Compartilhar (quadrado com seta).<br>2. Escolha <b>Adicionar à Tela de Início</b>.<br>3. Abra o Cofre pelo novo ícone.'
+      :'<b>Android (use o Chrome):</b><br>1. Toque no menu ⋮ do navegador.<br>2. Escolha <b>Instalar app</b> (não "Adicionar à tela inicial", que cria só um atalho).<br>3. Abra o Cofre pelo novo ícone.'}
+    <br><br>Se já tinha um ícone antigo na tela inicial, <b>apague-o antes</b> de instalar de novo.</div>`);
+  document.getElementById('mClose').addEventListener('click',closeModal);
+}
+function instalar(){ if(promptInstall){ promptInstall.prompt(); promptInstall.userChoice.then(()=>{ promptInstall=null; renderInstalar(); }); } else abrirAjudaInstalar(); }
+function renderInstalar(){
+  const app=emApp(), st=document.getElementById('instStatus'), b=document.getElementById('btnInstalar'), ban=document.getElementById('instBanner');
+  if(st) st.innerHTML=app?'✅ Você está usando o Cofre como aplicativo instalado.':'ℹ️ Você está no navegador. Instale para abrir em tela cheia, sem barra de endereço.';
+  if(b) b.style.display=app?'none':'';
+  if(ban){
+    const mostra=!app&&matchMedia('(max-width:720px)').matches&&!sessionStorage.getItem('cofre_inst_x');
+    ban.innerHTML=mostra?'<div class="inst"><span>📲 Instale o Cofre e abra em tela cheia</span><button id="instGo">Instalar</button><button id="instX" aria-label="Fechar">×</button></div>':'';
+    if(mostra){ document.getElementById('instGo').addEventListener('click',instalar); document.getElementById('instX').addEventListener('click',()=>{ sessionStorage.setItem('cofre_inst_x','1'); renderInstalar(); }); }
+  }
+}
+document.getElementById('btnInstalar').addEventListener('click',instalar);
+renderInstalar();
+function acaoURL(){
+  const a=new URLSearchParams(location.search).get('acao'); if(!a) return;
+  history.replaceState(null,'',location.pathname);
+  if(a==='despesa') openDespesaModal(null,todayKey()); else if(a==='receita') openReceitaModal(null); else if(a==='voz') openIAModal();
+}
 
 openMonths.add(todayKey());
 initDashboards();

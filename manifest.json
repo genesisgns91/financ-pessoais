@@ -1,1 +1,26 @@
-{"name":"Cofre - Controle Financeiro","short_name":"Cofre","description":"Controle financeiro pessoal","display":"standalone","orientation":"portrait","start_url":"./","scope":"./","background_color":"#10121b","theme_color":"#10121b","icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}]}
+{
+  "id": "cofre-financas",
+  "name": "Cofre - Controle Financeiro",
+  "short_name": "Cofre",
+  "description": "Controle financeiro pessoal: planeje, acompanhe e entenda seus gastos.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#10121b",
+  "theme_color": "#10121b",
+  "categories": ["finance", "productivity"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Nova despesa", "short_name": "Despesa", "url": "./?acao=despesa", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Falar um gasto", "short_name": "Falar", "url": "./?acao=voz", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Nova receita", "short_name": "Receita", "url": "./?acao=receita", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
+  ]
+}

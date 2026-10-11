@@ -636,6 +636,51 @@
   .inst span{ flex:1; } .inst button{ all:unset; cursor:pointer; padding:7px 12px; border-radius:10px; background:var(--emerald); color:#08120e; font-weight:700; font-size:12px; }
   .inst #instX{ background:none; color:var(--text-muted); padding:4px 8px; font-size:18px; }
   @media(display-mode:standalone){ body{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; } input,textarea{ -webkit-user-select:text; user-select:text; } }
+  /* ===== Logo no app + acabamento mobile ===== */
+  html,body{ max-width:100%; }
+  .brand-mark{ background:none !important; border-radius:0; overflow:visible; }
+  .brand-mark::after{ display:none !important; }
+  .brand-mark svg{ width:100%; height:100%; display:block; }
+  #loginGate .brand-mark{ width:104px; height:104px; }
+  .hero-brand svg{ width:32px; height:32px; flex:none; } .hero-brand{ gap:10px; }
+  .brand h1{ font-size:19px; letter-spacing:.14em; }
+  input[type=date],input[type=month]{ -webkit-appearance:none; appearance:none; min-height:44px; }
+  input,select,textarea{ min-width:0; max-width:100%; }
+  @media(max-width:720px){
+    body{ overflow-x:hidden; overflow-x:clip; }
+    header.top{ flex-wrap:nowrap; gap:10px; }
+    .brand p{ display:none; } .brand h1{ font-size:17px; }
+    .balance-pill{ padding:8px 14px; gap:8px; min-width:0; }
+    .balance-pill .lbl + .val + .lbl,#saldoProjDisplay{ display:none; }
+    .card{ padding:16px; }
+    .month-body{ padding:12px 12px 14px; }
+    .toast{ bottom:calc(96px + env(safe-area-inset-bottom)); max-width:calc(100% - 32px); text-align:center; }
+    .status-btn{ min-width:0; padding:6px 12px; }
+    .btn-icon{ padding:6px; }
+    .resumo-stats{ grid-template-columns:1fr 1fr; gap:10px; } .resumo-stats .stat{ padding:12px; } .resumo-stats .stat .v{ font-size:17px; }
+    #dashComprometBody{ grid-template-columns:1fr; }
+    .accounts-grid{ grid-template-columns:1fr; }
+    #view-despesas .form-grid[style]{ grid-template-columns:1fr 1fr !important; gap:8px; }
+    #fltQ{ grid-column:1/-1; }
+    #view-despesas > .row-between{ margin-bottom:10px; }
+    #view-despesas > .row-between > div:first-child{ display:none; }
+    #view-despesas > .row-between > div:last-child{ display:grid !important; grid-template-columns:1fr 1fr; gap:8px; width:100%; }
+    #view-despesas > .row-between .check-row{ grid-column:1/-1; order:5; }
+    #btnAddMesRetro{ grid-column:1/-1; }
+    #view-despesas .btn-sm{ justify-content:center; }
+    .month-stats .stat .k{ font-size:9.5px; letter-spacing:.02em; }
+    #receitasContainer .month-stats{ padding-left:0; }
+    .expense-row,.invoice-head{ display:grid; grid-template-columns:34px minmax(0,1fr) auto; column-gap:12px; row-gap:8px; align-items:center; padding:12px 0; }
+    .invoice-head{ padding:12px; }
+    .expense-row::after,.invoice-head::after{ display:none; }
+    .expense-row .icon-badge,.invoice-head .icon-badge{ grid-column:1; grid-row:1/3; width:34px; height:34px; font-size:16px; order:0; align-self:start; }
+    .expense-row .exp-main,.invoice-head .exp-main{ grid-column:2; grid-row:1; order:0; }
+    .expense-row .exp-val,.invoice-body .expense-row .exp-val,.invoice-head .exp-val{ grid-column:3; grid-row:1; order:0; margin:0; min-width:0; width:auto; text-align:right; font-size:13.5px; }
+    .expense-row .status-btn,.expense-row .exp-val + .tag,.invoice-head .status-btn{ grid-column:2; grid-row:2; order:0; margin:0; justify-self:start; }
+    .expense-row .exp-actions,.invoice-head .chevron{ grid-column:3; grid-row:2; order:0; margin:0; justify-self:end; min-width:0; }
+    .invoice-body{ padding:2px 12px 8px; }
+    .rv-row{ grid-template-columns:1fr 1fr; } .rv-row .rvOn{ grid-column:1/-1; justify-self:start; width:auto; } .rv-desc{ grid-column:1/-1; }
+  }
 </style>
 </head>
 <body>
@@ -3508,7 +3553,7 @@ function initInicio(){
   const el=document.getElementById('inicioBody');
   const pts=Array.from({length:14},(_,i)=>{ const c=PAL[i%PAL.length], z=4+(i*5)%9; return `<i class="pt" style="left:${(i*83+11)%96}%;width:${z}px;height:${z}px;animation-duration:${9+(i*3)%8}s;animation-delay:-${(i*2.3)%11}s;background:${c};box-shadow:0 0 14px ${c}"></i>`; }).join('');
   el.innerHTML=`<div class="hero" id="hero">${pts}<i class="ring r1"></i><i class="ring r2"></i>
-    <div class="hero-top"><div class="hero-brand"><span>$</span>COFRE</div><div class="hero-mes" id="heroMes"></div></div>
+    <div class="hero-top"><div class="hero-brand">${logoSVG('hbr',false)}COFRE</div><div class="hero-mes" id="heroMes"></div></div>
     <div class="hero-k">SALDO REAL</div><div class="hero-num" id="heroNum">R$ 0,00</div><div class="hero-proj" id="heroProj"></div><div class="meter" id="heroMeter"></div></div>
     <div class="acoes"><button class="ac ac-d" id="acDesp"><b>−</b>Despesa</button>
       <button class="mic-hero" id="acMic" aria-label="Falar ou escrever um gasto"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></svg><span>✨</span></button>
@@ -3544,6 +3589,18 @@ function renderInicio(){
   const top=state.despesas.filter(d=>d.mes===mes).sort((a,b)=>b.valor-a.valor).slice(0,5), mx=top[0]?Number(top[0].valor):1;
   document.getElementById('topMes').innerHTML=top.map(d=>{ const c=byId(state.categorias,d.categoriaId); return `<div class="tp"><span class="tp-i">${c?c.icone:'💳'}</span><div><p>${esc(d.descricao)}</p><i style="width:${Math.max(8,d.valor/mx*100)}%"></i></div><b>${fmt(d.valor)}</b></div>`; }).join('')||'<div class="empty-msg">Nenhuma despesa neste mês ainda.</div>';
 }
+
+/* ---------- Logo do app (mesma do ícone) ---------- */
+function logoSVG(id,ticks){
+  const t=ticks?Array.from({length:24},(_,i)=>`<line x1="100" y1="30" x2="100" y2="36" transform="rotate(${i*15} 100 100)"/>`).join(''):'', w=ticks?12:17;
+  return `<svg viewBox="0 0 200 200" aria-hidden="true"><defs><linearGradient id="${id}a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#34e3b0"/><stop offset=".55" stop-color="#6aa8ff"/><stop offset="1" stop-color="#c09bff"/></linearGradient><linearGradient id="${id}b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb36b"/><stop offset="1" stop-color="#ff5f86"/></linearGradient><linearGradient id="${id}c" gradientUnits="userSpaceOnUse" x1="0" y1="54" x2="0" y2="146"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#9bf2d6"/></linearGradient></defs>
+  <g transform="rotate(-90 100 100)" fill="none" stroke-linecap="round" stroke-width="${w}"><circle cx="100" cy="100" r="82" stroke="url(#${id}a)" stroke-dasharray="300 215"/><circle cx="100" cy="100" r="82" stroke="url(#${id}b)" stroke-dasharray="140 375" stroke-dashoffset="-336"/></g>
+  <g stroke="#9ba0c2" stroke-opacity=".6" stroke-width="3" stroke-linecap="round">${t}</g>
+  <circle cx="100" cy="100" r="48" fill="#12162a" stroke="#fff" stroke-opacity=".12" stroke-width="2"/>
+  <g fill="none" stroke="url(#${id}c)" stroke-width="${ticks?8:10}" stroke-linecap="round" stroke-linejoin="round"><path d="M123 79 C123 68 113 63 100 63 C86 63 77 70 77 81 C77 92 86 96 100 100 C114 104 123 108 123 119 C123 130 114 137 100 137 C86 137 76 131 76 121"/><path d="M100 54 V146"/></g></svg>`;
+}
+document.querySelectorAll('.brand-mark').forEach(el=>{ const g=!!el.closest('#loginGate'); el.innerHTML=logoSVG(g?'lgn':'hdr',g); });
+
 initInicio(); renderInicio();
 if(matchMedia('(max-width:720px)').matches) irPara('inicio');
 
